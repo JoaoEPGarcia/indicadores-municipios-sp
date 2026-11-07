@@ -4,11 +4,11 @@ Cada número impresso no README, no relatório e nos títulos das figuras tem um
 
 | Número | Valor | O que é | Sai de | Onde aparece |
 |---|---|---|---|---|
-| `\NumMunicipios` | 645 | municípios de SP na base | `scripts/numeros.py` | (ainda não usado) |
-| `\NumIndicadores` | 8 | Indicadores definidos por escrito | `scripts/numeros.py` | (ainda não usado) |
+| `\NumMunicipios` | 645 | municípios de SP na base | `scripts/numeros.py` | `excel/painel-municipios-sp.xlsx` |
+| `\NumIndicadores` | 8 | Indicadores definidos por escrito | `scripts/numeros.py` | `excel/painel-municipios-sp.xlsx` |
 | `\NumIndicadoresComparaveis` | 7 | Indicadores comparados com a faixa (todos menos a receita total) | `scripts/numeros.py` | `graficos/02-municipio-na-faixa.png` |
-| `\NumAnoInicial` | 2015 | primeiro ano da série | `scripts/numeros.py` | `graficos/01-painel-municipio.png`, `graficos/03-previsao.png` |
-| `\NumAnoFinal` | 2025 | último ano da série | `scripts/numeros.py` | `graficos/01-painel-municipio.png` |
+| `\NumAnoInicial` | 2015 | primeiro ano da série | `scripts/numeros.py` | `graficos/01-painel-municipio.png`, `graficos/03-previsao.png`, `excel/painel-municipios-sp.xlsx` |
+| `\NumAnoFinal` | 2025 | último ano da série | `scripts/numeros.py` | `graficos/01-painel-municipio.png`, `excel/painel-municipios-sp.xlsx` |
 | `\NumLinhasFato` | 50.413 | linhas da tabela fato (município × ano × Indicador com dado) | `scripts/numeros.py` | (ainda não usado) |
 | `\NumFaixas` | 7 | Faixas de porte do Censo 2022 | `scripts/numeros.py` | (ainda não usado) |
 | `\NumMunicipioAnos` | 7.095 | declarações possíveis à DCA (municípios × anos) | `scripts/numeros.py` | (ainda não usado) |
@@ -26,7 +26,7 @@ Cada número impresso no README, no relatório e nos títulos das figuras tem um
 | `\NumCelulasBatem` | 174 | células em que a medida DAX devolveu o valor esperado | `scripts/conferir_powerbi.py` | (ainda não usado) |
 | `\NumCelulasCompletas` | 151.239 | células da conferência completa (3 medidas × município × ano × Indicador) | `scripts/conferir_powerbi.py` | (ainda não usado) |
 | `\NumDivergenciasCompletas` | 0 | divergências entre DAX e SQLite na conferência completa | `scripts/conferir_powerbi.py` | (ainda não usado) |
-| `\NumExemplo` | Ibirá | município de exemplo, sorteado com semente fixa | `scripts/comum.py` | `graficos/01-painel-municipio.png`, `graficos/02-municipio-na-faixa.png`, `graficos/03-previsao.png` |
+| `\NumExemplo` | Ibirá | município de exemplo, sorteado com semente fixa | `scripts/comum.py` | `graficos/01-painel-municipio.png`, `graficos/02-municipio-na-faixa.png`, `graficos/03-previsao.png`, `excel/painel-municipios-sp.xlsx` |
 | `\NumExemploCandidatos` | 521 | municípios com série completa entre os quais o exemplo foi sorteado | `scripts/comum.py` | (ainda não usado) |
 | `\NumExemploFaixa` | de 10 a 20 mil | Faixa de porte do exemplo | `scripts/numeros.py` | `graficos/01-painel-municipio.png`, `graficos/02-municipio-na-faixa.png` |
 | `\NumExemploNaFaixa` | 120 | municípios na Faixa de porte do exemplo | `scripts/numeros.py` | `graficos/01-painel-municipio.png`, `graficos/02-municipio-na-faixa.png` |
@@ -66,8 +66,8 @@ Cada número impresso no README, no relatório e nos títulos das figuras tem um
 | `\NumOrigemFinal` | 2022 | última origem do Teste contra o passado | `scripts/modelo.py` | `graficos/04-teste-do-modelo.png` |
 | `\NumCobOitentaSem` | 71 | cobertura do intervalo de 80% sem ajuste, em % | `scripts/modelo.py` | (ainda não usado) |
 | `\NumCobOitentaCom` | 81 | cobertura do intervalo de 80% depois do ajuste, em % | `scripts/modelo.py` | `graficos/04-teste-do-modelo.png` |
-| `\NumCobOitentaPior` | 62 | cobertura do intervalo de 80% na pior origem deixada de fora, depois do ajuste, em % | `scripts/modelo.py` | `graficos/04-teste-do-modelo.png` |
-| `\NumCobOitentaPiorOrigem` | 2022 | a pior origem deixada de fora para o intervalo de 80% | `scripts/modelo.py` | `graficos/04-teste-do-modelo.png` |
+| `\NumCobOitentaPior` | 62 | cobertura do intervalo de 80% na pior origem deixada de fora, depois do ajuste, em % | `scripts/modelo.py` | `graficos/04-teste-do-modelo.png`, `excel/painel-municipios-sp.xlsx` |
+| `\NumCobOitentaPiorOrigem` | 2022 | a pior origem deixada de fora para o intervalo de 80% | `scripts/modelo.py` | `graficos/04-teste-do-modelo.png`, `excel/painel-municipios-sp.xlsx` |
 | `\NumEscalaOitenta` | 1,25 | fator de alargamento do intervalo de 80% | `scripts/modelo.py` | (ainda não usado) |
 | `\NumCobNoventaCincoSem` | 92 | cobertura do intervalo de 95% sem ajuste, em % | `scripts/modelo.py` | (ainda não usado) |
 | `\NumCobNoventaCincoCom` | 95 | cobertura do intervalo de 95% depois do ajuste, em % | `scripts/modelo.py` | (ainda não usado) |
