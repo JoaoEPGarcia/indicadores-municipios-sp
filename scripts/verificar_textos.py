@@ -142,8 +142,7 @@ def numeros_digitados(texto, sintaxe, marcador):
     return achados
 
 
-def conferir_digitados(v, raiz, caminho):
-    texto = (raiz / caminho).read_text(encoding='utf-8')
+def conferir_digitados(v, caminho, texto):
     if caminho.endswith('.tex'):
         achados, uso = numeros_digitados(texto, SINTAXE_LATEX, MACRO), r'uma macro \Num...'
     else:
@@ -166,27 +165,31 @@ def ler_registro(raiz):
     return dict(re.findall(r'^\\newcommand\{\\(Num[A-Za-z]+)\}\{(.*)\}\s*$', texto, flags=re.M))
 
 
-def usos_no_modelo(raiz):
+def usos_no_modelo(texto):
     """(onde, nome) de cada marcador {{...}} do modelo do README, fora de comentário."""
-    texto = apagar((raiz / MODELO_README).read_text(encoding='utf-8'), r'<!--.*?-->', re.S)
+    texto = apagar(texto, r'<!--.*?-->', re.S)
     return [(f'{MODELO_README}:{linha_de(texto, m.start())}', m.group(1).strip())
             for m in re.finditer(r'\{\{([^}]*)\}\}', texto)]
 
 
-def usos_no_latex(raiz, caminho):
+def usos_no_latex(caminho, texto):
     r"""(onde, nome) de cada macro \Num... de um .tex do relatório, fora de comentário."""
-    texto = apagar((raiz / caminho).read_text(encoding='utf-8'), r'(?<!\\)%[^\n]*')
+    texto = apagar(texto, r'(?<!\\)%[^\n]*')
     return [(f'{caminho}:{linha_de(texto, m.start())}', m.group(0)[1:]) for m in re.finditer(MACRO, texto)]
 
 
-def textos_latex(raiz):
-    """Os .tex do relatório escritos à mão. Os gerados por script (primeira linha "% GERADO", como
-    relatorio/numeros.tex e as linhas de tabela) têm números por construção e ficam de fora."""
+def ler_tex(raiz):
+    """{caminho: texto} de cada .tex de relatorio/, lidos uma vez só."""
     pasta = raiz / 'relatorio'
     if not pasta.exists():
-        return []
-    return [p.relative_to(raiz).as_posix() for p in sorted(pasta.rglob('*.tex'))
-            if not p.read_text(encoding='utf-8').startswith('% GERADO')]
+        return {}
+    return {p.relative_to(raiz).as_posix(): p.read_text(encoding='utf-8') for p in sorted(pasta.rglob('*.tex'))}
+
+
+def gerado(texto):
+    """Um .tex gerado por script (primeira linha "% GERADO", como as linhas de tabela) tem os números
+    por construção: não se confere número digitado nele, só as macros que usa."""
+    return texto.startswith('% GERADO')
 
 
 def usos_nas_figuras(raiz):
@@ -438,24 +441,27 @@ def verificar(raiz, limite_pdflatex=600):
     v = Verificacao()
     usos = usos_nas_figuras(raiz)
     if (raiz / MODELO_README).exists():
-        conferir_digitados(v, raiz, MODELO_README)
-        usos += usos_no_modelo(raiz)
+        modelo = (raiz / MODELO_README).read_text(encoding='utf-8')
+        conferir_digitados(v, MODELO_README, modelo)
+        usos += usos_no_modelo(modelo)
     else:
         v.pulada('modelo do README', f'{MODELO_README} ainda não existe')
-    for caminho in textos_latex(raiz):
-        conferir_digitados(v, raiz, caminho)
-        usos += usos_no_latex(raiz, caminho)
+    tex = ler_tex(raiz)
+    for caminho, texto in tex.items():
+        if caminho == REGISTRO:   # o registro define as macros; não as usa
+            continue
+        if not gerado(texto):
+            conferir_digitados(v, caminho, texto)
+        usos += usos_no_latex(caminho, texto)
     conferir_registro(v, raiz, usos)
     # os versionados e, mesmo antes do primeiro commit, os textos entregues
-    entregues = [c for c in (MODELO_README, README) if (raiz / c).exists()] + textos_latex(raiz)
+    entregues = [c for c in (MODELO_README, README) if (raiz / c).exists()] + list(tex)
     conferir_publicacao(v, raiz, entregues)
     if (raiz / README).exists():
         linhas = (raiz / README).read_text(encoding='utf-8').splitlines()
         conferir_texto_final(v, README, [(f'{README}:{i}', t) for i, t in enumerate(linhas, start=1)],
                              publicacao=False)
     if (raiz / RELATORIO_TEX).exists():
-        tex = {p.relative_to(raiz).as_posix(): p.read_text(encoding='utf-8')
-               for p in sorted((raiz / 'relatorio').rglob('*.tex'))}
         conferir_compilacao(v, raiz, limite_pdflatex, tex)
     else:
         v.pulada('compilação do relatório', f'{RELATORIO_TEX} ainda não existe')

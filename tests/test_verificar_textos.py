@@ -232,6 +232,19 @@ class TesteVerificador(unittest.TestCase):
         codigo, saida = self.repo.verificar()
         self.assertEqual(codigo, 0, saida)
 
+    def test_tex_gerado_nao_tem_numero_digitado_conferido_mas_tem_as_macros(self):
+        # Linhas de tabela geradas por script: os números vêm por construção, as macros não.
+        self.repo.escrever('relatorio/tabelas/conferencia.tex', r'''
+            % GERADO por scripts/numeros.py. Não edite à mão: rode o script de novo.
+            Medidas & 123 & \NumCelulasBatem \\
+            Municípios & 456 & \NumCidades \\
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('relatorio/tabelas/conferencia.tex:2: NumCelulasBatem está PENDENTE', saida)
+        self.assertIn('relatorio/tabelas/conferencia.tex:3: NumCidades não existe', saida)
+        self.assertNotIn('123', saida)
+
     def test_data_da_capa_digitada_falha(self):
         self.repo.escrever('relatorio/capa.tex', r'''
             \newcommand{\DataCapa}{Novembro de 2026}
