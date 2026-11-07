@@ -213,12 +213,16 @@ def conferir_registro(v, raiz, usos):
 
 # ── "publicado na web" ──────────────────────────────────────────────────
 # O painel abre no Power BI Desktop e não foi publicado (spec, Out of Scope). Nenhum texto diz o contrário.
+PUBLICADO = r'\b(?:publicad[oa]s?|publicamos|publiquei|publicou|publicaram)\b'
+NA_WEB = r'(?:n[ao]\s+(?:web|internet|(?:Power\s+BI\s+)?Service)|em\s+(?:web|internet)|on-?line)\b'
 PUBLICACAO = re.compile('|'.join([
-    r'publicad[oa]s?\s+(?:na|em)\s+(?:web|internet)',
-    r'publicad[oa]s?\s+no\s+(?:Power\s+BI\s+)?Service',
-    r'publish(?:ed)?\s+to\s+(?:the\s+)?web',
-    r'published\s+(?:on|to)\s+(?:the\s+)?(?:internet|Power\s+BI\s+Service)',
-    r'app\.powerbi\.com/view',              # link de "Publicar na Web"
+    # "publicado na web", "publicamos o painel na web", "publicado online", "publicado no Service":
+    # até quatro palavras entre o verbo e o lugar, sem atravessar pontuação
+    PUBLICADO + r'(?:\s+[^\s.;:!?]+){0,4}?\s+' + NA_WEB,
+    r'\bdisponíve(?:l|is)\s+(?:on-?line|n[ao]\s+(?:web|internet))\b',
+    r'\bpublish(?:ed)?\s+to\s+(?:the\s+)?web',
+    r'\bpublished\s+(?:online|(?:on|to)\s+(?:the\s+)?(?:internet|web|Power\s+BI\s+Service))',
+    r'app\.powerbi\.com',                   # link de relatório publicado ("Publicar na Web" ou Service)
 ]), re.I)
 # Frase que nega ("o painel não foi publicado na web") não afirma a publicação. A negação só conta
 # quando rege a afirmação: na mesma oração e a poucas palavras antes dela ("nada diz que o painel foi
@@ -227,7 +231,9 @@ PUBLICACAO = re.compile('|'.join([
 NEGACAO = re.compile(r'\b(?:não|nunca|nada|nem|jamais|not|never|nothing)\b', re.I)
 FIM_DE_ORACAO = re.compile(r'[.;:!?,()—]|\n\s*\n|\n\s*(?:[-*+>#|]|\d+[.)])')
 ALCANCE_DA_NEGACAO = 6  # palavras antes da afirmação
-EXTENSOES_DE_TEXTO = ('.md', '.tex', '.txt')
+# Os únicos textos versionados que não se leem: o verificador e os testes dele trazem as frases de
+# propósito, para acusá-las.
+FORA_DA_PUBLICACAO = ('scripts/verificar_textos.py', 'tests/test_verificar_textos.py')
 
 
 def negada(texto, inicio):
@@ -250,28 +256,49 @@ def frases_de_publicacao(texto):
     return achados
 
 
-def textos_versionados(raiz):
-    """Os arquivos de texto do repositório (git ls-files). Fora de um repositório git, todos os que não
-    estão em pasta oculta (.git, .venv, .scratch)."""
-    r = subprocess.run(['git', 'ls-files', '-z'], cwd=raiz, capture_output=True)
-    if r.returncode == 0:
-        caminhos = [c for c in r.stdout.decode('utf-8').split('\0') if c]
-    else:
-        caminhos = [p.relative_to(raiz).as_posix() for p in raiz.rglob('*')
-                    if p.is_file() and not any(parte.startswith('.') for parte in p.relative_to(raiz).parts)]
-    return sorted(c for c in caminhos if c.endswith(EXTENSOES_DE_TEXTO) and (raiz / c).exists())
+def arquivos_versionados(raiz):
+    """Os arquivos do repositório (git ls-files), ou None fora de um repositório git."""
+    try:
+        r = subprocess.run(['git', 'ls-files', '-z'], cwd=raiz, capture_output=True)
+    except FileNotFoundError:
+        return None
+    if r.returncode != 0:
+        return None
+    return [c for c in r.stdout.decode('utf-8').split('\0') if c]
 
 
-def conferir_publicacao(v, raiz, caminhos):
+def ler_se_for_texto(arq):
+    """O conteúdo do arquivo, se for texto em UTF-8; None se for binário (imagem, SQLite)."""
+    dados = arq.read_bytes()
+    if b'\0' in dados:
+        return None
+    try:
+        return dados.decode('utf-8')
+    except UnicodeDecodeError:
+        return None
+
+
+def conferir_publicacao(v, raiz, entregues):
+    """Lê todo arquivo versionado que seja texto, de qualquer extensão, e os textos entregues ainda não
+    versionados."""
     nome = 'nenhum texto diz que o painel foi publicado na web'
-    problemas = []
-    for caminho in caminhos:
-        texto = (raiz / caminho).read_text(encoding='utf-8', errors='replace')
+    versionados = arquivos_versionados(raiz)
+    if versionados is None:
+        v.falha(nome, [f'git ls-files não rodou em {raiz}: a pasta tem de ser um repositório git'])
+        return
+    problemas, lidos = [], 0
+    for caminho in sorted(set(versionados) | set(entregues)):
+        if caminho in FORA_DA_PUBLICACAO or not (raiz / caminho).is_file():
+            continue
+        texto = ler_se_for_texto(raiz / caminho)
+        if texto is None:
+            continue
+        lidos += 1
         problemas += [f'{caminho}:{n}: {trecho}' for n, trecho in frases_de_publicacao(texto)]
     if problemas:
         v.falha(nome, problemas)
     else:
-        v.ok(f'{nome} ({len(caminhos)} arquivos)')
+        v.ok(f'{nome} ({lidos} arquivos de texto)')
 
 
 # ── compilação do relatório ─────────────────────────────────────────────
@@ -366,7 +393,7 @@ def verificar(raiz, limite_pdflatex=600):
     conferir_registro(v, raiz, usos)
     # os versionados e, mesmo antes do primeiro commit, os textos entregues
     entregues = [c for c in (MODELO_README, README) if (raiz / c).exists()] + textos_latex(raiz)
-    conferir_publicacao(v, raiz, sorted(set(textos_versionados(raiz)) | set(entregues)))
+    conferir_publicacao(v, raiz, entregues)
     if (raiz / README).exists():
         linhas = (raiz / README).read_text(encoding='utf-8').splitlines()
         conferir_texto_final(v, README, [(f'{README}:{i}', t) for i, t in enumerate(linhas, start=1)],

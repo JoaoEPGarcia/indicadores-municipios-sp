@@ -234,6 +234,37 @@ class TesteVerificador(unittest.TestCase):
         codigo, saida = self.repo.verificar()
         self.assertEqual(codigo, 0, saida)
 
+    def test_outras_formas_de_dizer_que_o_painel_foi_publicado_falham(self):
+        for frase in ['Publicamos o painel na web.',
+                      'O painel foi publicado online.',
+                      'O painel foi publicado na internet.',
+                      'O painel está disponível online em painel.exemplo.org.',
+                      'Abra em https://app.powerbi.com/groups/me/reports/abc.']:
+            with self.subTest(frase=frase):
+                self.repo.escrever('GLOSSARY.md', '# Glossário\n\n' + frase + '\n', versionar=True)
+                codigo, saida = self.repo.verificar()
+                self.assertEqual(codigo, 1, saida)
+                self.assertIn('GLOSSARY.md:3', saida)
+
+    def test_publicacao_em_texto_versionado_de_qualquer_extensao_falha(self):
+        for caminho in ['powerbi/tabelas/Medidas.tmdl', 'scripts/gerar_tema.py', 'NOTAS']:
+            with self.subTest(caminho=caminho):
+                self.repo.escrever(caminho, '// o painel foi publicado na web\n', versionar=True)
+                codigo, saida = self.repo.verificar()
+                self.assertEqual(codigo, 1, saida)
+                self.assertIn(f'{caminho}:1', saida)
+                subprocess.run(['git', 'rm', '-q', '-f', caminho], cwd=self.repo.raiz, check=True)
+
+    def test_binario_versionado_e_o_proprio_verificador_ficam_de_fora(self):
+        imagem = self.repo.raiz / 'graficos' / 'captura.png'
+        imagem.parent.mkdir()
+        imagem.write_bytes(b'\x89PNG\r\n\x1a\n\x00\x00\xff\xfe o painel foi publicado na web')
+        self.repo.escrever('scripts/verificar_textos.py', "# acusa 'o painel foi publicado na web'\n")
+        self.repo.escrever('tests/test_verificar_textos.py', "frase = 'o painel foi publicado na web'\n")
+        subprocess.run(['git', 'add', '.'], cwd=self.repo.raiz, check=True)
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 0, saida)
+
     def test_negacao_so_vale_quando_rege_a_publicacao(self):
         afirmam = [
             'Não é difícil: o painel foi publicado na web.',
