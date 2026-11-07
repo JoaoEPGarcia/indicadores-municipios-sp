@@ -350,6 +350,10 @@ def verificar(raiz):
 
 
 def main():
+    # UTF-8 em qualquer saída: no console do Windows (cp1252) e em pipe, os acentos e o texto do PDF
+    # saem legíveis, e um caractere fora da página de código não derruba o comando.
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('--raiz', type=Path, default=RAIZ, help='raiz do repositório (padrão: a deste script)')
     raiz = ap.parse_args().raiz.resolve()

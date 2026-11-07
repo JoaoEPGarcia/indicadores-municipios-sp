@@ -49,11 +49,14 @@ class Repositorio:
             subprocess.run(['git', 'add', caminho], cwd=self.raiz, check=True)
         return arq
 
-    def verificar(self):
-        r = subprocess.run([sys.executable, str(SCRIPT), '--raiz', str(self.raiz)],
-                           capture_output=True, text=True, encoding='utf-8',
-                           env={**os.environ, 'PYTHONIOENCODING': 'utf-8'})
-        return r.returncode, r.stdout + r.stderr
+    def verificar(self, *opcoes, env=None):
+        # Sem PYTHONIOENCODING nem PYTHONUTF8: o comando escreve os acentos sozinho, também no console
+        # do Windows, cuja página de código (cp1252) não é UTF-8.
+        ambiente = {k: v for k, v in os.environ.items() if k not in ('PYTHONIOENCODING', 'PYTHONUTF8')}
+        ambiente.update(env or {})
+        r = subprocess.run([sys.executable, str(SCRIPT), '--raiz', str(self.raiz), *opcoes],
+                           capture_output=True, env=ambiente)
+        return r.returncode, (r.stdout + r.stderr).decode('utf-8', errors='replace')
 
     def fechar(self):
         self._tmp.cleanup()
@@ -71,6 +74,10 @@ class TesteVerificador(unittest.TestCase):
         self.assertIn('docs/README.modelo.md', saida)
         self.assertIn('relatorio/relatorio.tex', saida)
         self.assertIn('relatorio/relatorio.pdf', saida)
+
+    def test_saida_escreve_os_acentos_em_utf8(self):
+        codigo, saida = self.repo.verificar()
+        self.assertIn('ainda não existe', saida)
 
     def test_numero_digitado_no_modelo_do_readme_falha_com_arquivo_e_linha(self):
         self.repo.escrever('docs/README.modelo.md', '''
