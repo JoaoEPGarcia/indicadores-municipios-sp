@@ -67,31 +67,39 @@ def linha_de(texto, pos):
     return texto.count('\n', 0, pos) + 1
 
 
-# As exceções à regra do número digitado (GUIA_ESTILO.md, "A regra dos números"). Lista única e curta:
-# cada entrada é um número que faz parte de um NOME, e não um resultado do estudo. Antes de pôr uma
-# entrada aqui, veja se o número não deveria sair de scripts/numeros.py.
-EXCECOES = [
+# As exceções à regra do número digitado (GUIA_ESTILO.md, "A regra dos números"), decididas em
+# docs/adr/0002-excecoes-ao-numero-digitado.md. Esta é a lista única, e curta: cada entrada é um número
+# que faz parte de um NOME, de um comando ou da estrutura do texto, e não um resultado do estudo. Antes
+# de pôr uma entrada aqui, veja se o número não deveria sair de scripts/numeros.py. O ticket 06 (README
+# novo) acrescenta o que a seção de Fontes pedir, se pedir.
+EXCECOES = [re.compile(p, f) for p, f in [
+    # código no README: comando, nome de arquivo, versão num comando. Bloco cercado por ``` e trecho
+    # entre crases, nesta ordem
+    (r'^\s*```.*?^\s*```', re.S | re.M),
+    (r'`[^`\n]*`', 0),
+    # estrutura: título numerado ("## 2. Como foi feito") e passo de lista numerada ("1. Instale"); até
+    # dois algarismos, para que um ano no começo de uma linha quebrada continue acusado
+    (r'^\s*(?:#{1,6}\s+)?\d{1,2}[.)](?=\s)', re.M),
+    # versão de ferramenta: "Python 3.12", "Excel 365"
+    (r'\b(?:Python|R|Excel)\s+\d+(?:\.\d+)*\b', 0),
     # ano no nome de uma fonte: o "Censo 2022" é a pesquisa, e não um recorte escolhido pelo estudo
-    r'\bCenso(?: Demográfico| Escolar)? \d{4}\b',
+    (r'\bCenso(?: Demográfico| Escolar)? \d{4}\b', 0),
     # o número do próprio ato normativo, logo depois do nome (com o órgão e "nº" no meio, se houver):
     # "Lei 8.080/1990", "Portaria STN nº 642/2019", "Lei Complementar nº 101/2000". Outro número na
     # mesma frase ("Segundo a Portaria, 45 municípios") continua acusado.
-    r'\b(?:Lei|Portaria|Decreto|Resolução)(?:[ -](?:[A-Z][A-Za-z]*(?:/[A-Z]+)?)){0,2}'
-    r'\s+(?:n\.?\s?[º°o]\.?\s*)?\d[\d.]*(?:/\d{2,4})?',
+    (r'\b(?:Lei|Portaria|Decreto|Resolução)(?:[ -](?:[A-Z][A-Za-z]*(?:/[A-Z]+)?)){0,2}'
+     r'\s+(?:n\.?\s?[º°o]\.?\s*)?\d[\d.]*(?:/\d{2,4})?', 0),
     # versão no nome de uma licença: "CC BY 4.0", "CC BY-ND 3.0" (seção de Fontes e licenças)
-    r'\bCC BY(?:-[A-Z]{2})*\s+\d\.\d\b',
+    (r'\bCC BY(?:-[A-Z]{2})*\s+\d\.\d\b', 0),
     # nome de arquivo: "01-painel-municipio.png", "backtest_2015.csv"
-    r'[\w.-]*\d[\w.-]*\.(?:csv|png|pdf|tex|md|py|json|sqlite|xlsx|tmdl|pbip|sql)\b',
-]
+    (r'[\w.-]*\d[\w.-]*\.(?:csv|png|pdf|tex|md|py|json|sqlite|xlsx|tmdl|pbip|sql)\b', 0),
+]]
 
-# O que, no Markdown, não é texto corrido: o leitor não vê ali um número do estudo.
+# O que, no Markdown, não é texto: o leitor não vê ali número nenhum.
 SINTAXE_MARKDOWN = [
     (r'<!--.*?-->', re.S),               # comentário (scripts/numeros.py o tira do README)
-    (r'^\s*```.*?^\s*```', re.S | re.M),  # bloco de código: comandos
-    (r'`[^`\n]*`', 0),                    # código na linha: comando, caminho, nome de coluna
     (r'https?://[^\s)>]+', 0),            # endereço
     (r'\]\([^)\n]*\)', 0),                # destino de link e de imagem
-    (r'^\s*\d+[.)](?=\s)', re.M),         # marca de lista numerada
 ]
 
 # O que, no LaTeX, não é texto corrido. O modelo do kit tem medidas, coordenadas e cores que não são
@@ -124,8 +132,8 @@ def numeros_digitados(texto, sintaxe, marcador):
     for padrao, flags in sintaxe:
         limpo = apagar(limpo, padrao, flags)
     limpo = apagar(limpo, marcador)
-    for padrao in EXCECOES:
-        limpo = apagar(limpo, padrao)
+    for excecao in EXCECOES:
+        limpo = apagar(limpo, excecao)
     linhas = texto.splitlines()
     achados = []
     for m in re.finditer(r'\d+(?:[.,]\d+)*', limpo):

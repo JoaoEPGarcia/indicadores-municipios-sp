@@ -19,6 +19,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 SCRIPT = REPO / 'scripts' / 'verificar_textos.py'
 MODELO_DO_KIT = REPO / 'estilo' / 'modelo_relatorio.tex'
+README_DO_KIT = REPO / 'estilo' / 'README_modelo.md'
 
 # A saída do registro de números (relatorio/numeros.tex), como scripts/numeros.py a escreve.
 REGISTRO = textwrap.dedent(r'''
@@ -139,6 +140,19 @@ class TesteVerificador(unittest.TestCase):
         self.assertEqual(codigo, 1, saida)
         self.assertIn('docs/README.modelo.md:4: número digitado "45"', saida)
         self.assertNotIn('README.modelo.md:3', saida)
+
+    def test_estrutura_do_readme_modelo_do_kit_passa(self):
+        # O modelo de README do kit (estilo/README_modelo.md), com cada <lugar a preencher> trocado por
+        # texto, como o ticket 06 vai fazer: títulos numerados, passos numerados e versão de ferramenta
+        # não são números do estudo.
+        modelo = README_DO_KIT.read_text(encoding='utf-8')
+        while re.search(r'<[^<>\n]*>', modelo):
+            modelo = re.sub(r'<[^<>\n]*>', 'texto', modelo)
+        modelo = modelo.replace('## Como a análise foi feita', '## 2. Como a análise foi feita')
+        modelo += '\nFeito em Python 3.12, Excel 365 e Power BI Desktop.\n'
+        self.repo.escrever('docs/README.modelo.md', modelo)
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 0, saida)
 
     def test_marcador_que_nao_existe_no_registro_falha(self):
         self.repo.escrever('docs/README.modelo.md', '''
