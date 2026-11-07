@@ -10,4 +10,4 @@ O guia do kit diz que nenhum número se digita no `.tex` nem no `.md`: todo núm
 
 ## Consequences
 
-O verificador dos textos falha com qualquer número fora de marcador, macro ou exceção, apontando arquivo e linha. A data da capa do relatório não é exceção: mês e ano vêm do registro (ticket 07). O ticket 06 pode acrescentar à lista o que a seção de Fontes do README pedir, como código de tabela do IBGE, e decide isso lá.
+O verificador dos textos falha com qualquer número fora de marcador, macro ou exceção, apontando arquivo e linha. A data da capa do relatório não é exceção: mês e ano vêm do registro (ticket 07). A seção de Fontes do README (ticket 06) não pediu exceção nova: os códigos de tabela do SIDRA vão entre crases, como identificadores, o ato normativo já é exceção, e a data da leitura das licenças é um número do registro.
