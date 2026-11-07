@@ -1,0 +1,17 @@
+{
+  "celulas": 256,
+  "batem": 256,
+  "municipios": 4,
+  "lista": [
+    "Franco da Rocha",
+    "Ibirá",
+    "Morro Agudo",
+    "Santa Lúcia"
+  ],
+  "arquivos": [
+    "franco-da-rocha.xlsx",
+    "ibira.xlsx",
+    "morro-agudo.xlsx",
+    "santa-lucia.xlsx"
+  ]
+}
