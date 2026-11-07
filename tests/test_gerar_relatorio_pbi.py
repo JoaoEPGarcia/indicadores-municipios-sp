@@ -110,6 +110,126 @@ class TesteRelatorioGerado(unittest.TestCase):
                         usados += 1
         self.assertGreater(usados, 50)
 
+    # ── o que vale para todo visual ──
+    def test_todo_arquivo_declara_o_esquema_oficial(self):
+        for arq in [self.saida / 'definition.pbir', *self.definicao.rglob('*.json')]:
+            self.assertRegex(ler(arq)['$schema'], ESQUEMA, arq)
+
+    def test_todo_visual_tem_texto_alternativo(self):
+        for chave, v in self.visuais.items():
+            alt = v['visual']['visualContainerObjects']['general'][0]['properties']['altText']
+            self.assertGreater(len(alt['expr']['Literal']['Value'].strip("'")), 15, chave)
+
+    def test_ordem_de_tabulacao_unica_por_pagina(self):
+        for pagina in {p for p, _ in self.visuais}:
+            ordens = [v['position']['tabOrder'] for (p, _), v in self.visuais.items() if p == pagina]
+            self.assertEqual(len(ordens), len(set(ordens)), pagina)
+
+    def test_ordem_de_tabulacao_segue_o_roteiro(self):
+        # município, Indicador, visual principal, cartões, tabela (powerbi/roteiro.md, "Ordem de tabulação")
+        def papel(v):
+            tipo = v['visual']['visualType']
+            if tipo == 'slicer':
+                campo = v['visual']['query']['queryState']['Values']['projections'][0]['field']['Column']
+                return {'municipio': 0, 'nome': 1}.get(campo['Property'], 2)
+            return {'lineChart': 3, 'scatterChart': 3, 'card': 4, 'multiRowCard': 4, 'tableEx': 5}.get(tipo)
+
+        for pagina in ('municipio', 'comparacao', 'previsao'):
+            visuais = sorted((v for (p, _), v in self.visuais.items() if p == pagina),
+                             key=lambda v: v['position']['tabOrder'])
+            papeis = [papel(v) for v in visuais if papel(v) is not None]
+            self.assertEqual(papeis, sorted(papeis), pagina)
+            self.assertEqual(visuais[0]['visual']['visualType'], 'textbox', f'{pagina}: o título vem primeiro')
+
+    # ── segmentações ──
+    def segmentacoes(self, coluna):
+        """{página: visual} das segmentações sobre (tabela, coluna)."""
+        achadas = {}
+        for (pagina, _), v in self.visuais.items():
+            if v['visual']['visualType'] == 'slicer':
+                campo = v['visual']['query']['queryState']['Values']['projections'][0]['field']['Column']
+                if (campo['Expression']['SourceRef']['Entity'], campo['Property']) == coluna:
+                    achadas[pagina] = v
+        return achadas
+
+    @staticmethod
+    def escolhido(segmentacao):
+        selecao = segmentacao['visual']['objects']['general'][0]['properties']['filter']['filter']
+        valores = selecao['Where'][0]['Condition']['In']['Values']
+        return [v[0]['Literal']['Value'] for v in valores]
+
+    def test_segmentacao_de_indicador_sincronizada_nas_paginas_1_e_2(self):
+        seg = self.segmentacoes(('dim_indicador', 'nome'))
+        self.assertEqual(sorted(seg), ['comparacao', 'municipio'])
+        grupos = {v['visual']['syncGroup']['groupName'] for v in seg.values()}
+        self.assertEqual(len(grupos), 1)
+        for v in seg.values():
+            self.assertEqual(self.escolhido(v), ["'Despesa com saúde por habitante'"])
+
+    def test_municipio_de_exemplo_escolhido_em_toda_pagina_com_municipio(self):
+        exemplo = re.search(r'\\newcommand\{\\NumExemplo\}\{(.+)\}',REGISTRO.read_text(encoding='utf-8')).group(1)
+        dim = self.segmentacoes(('dim_municipio', 'municipio'))
+        solta = self.segmentacoes(('sel_municipio', 'municipio'))
+        self.assertEqual(sorted(dim), ['municipio', 'previsao'])
+        self.assertEqual(sorted(solta), ['comparacao'])   # a página 2 usa a cópia solta (roteiro, página 2)
+        self.assertEqual(len({v['visual']['syncGroup']['groupName'] for v in dim.values()}), 1)
+        for v in [*dim.values(), *solta.values()]:
+            self.assertEqual(self.escolhido(v), [f"'{exemplo}'"])
+            self.assertEqual(v['visual']['objects']['selection'][0]['properties']['strictSingleSelect'],
+                             {'expr': {'Literal': {'Value': 'true'}}})
+
+    # ── o que o painel não faz ──
+    def test_nenhum_ranking_de_municipios_por_nome(self):
+        for chave, v in self.visuais.items():
+            consulta = v['visual'].get('query', {})
+            ordem = [s['field'] for s in consulta.get('sortDefinition', {}).get('sort', [])]
+            self.assertNotIn('municipio', [f.get('Column', {}).get('Property') for f in ordem], chave)
+            nomes = [p['field'] for papel in consulta.get('queryState', {}).values() for p in papel['projections']
+                     if p['field'].get('Column', {}).get('Property') == 'municipio']
+            if not nomes:
+                continue
+            # o nome do município só entra numa segmentação ou como ponto da dispersão, e nada ordena por ele
+            self.assertIn(v['visual']['visualType'], ('slicer', 'scatterChart'), chave)
+            self.assertNotIn('sortDefinition', v['visual']['query'], chave)
+
+    def test_cores_so_do_destaque_e_do_neutro(self):
+        tema = ler(self.saida / 'StaticResources' / 'RegisteredResources' / 'tema-portfolio.json')
+        permitidas = {tema['dataColors'][0], tema['dataColors'][1], tema['backgroundLight'], tema['foreground']}
+        for chave, v in self.visuais.items():
+            for no in percorrer(v):
+                if 'ThemeDataColor' in no:
+                    self.assertIn(no['ThemeDataColor']['ColorId'], (0, 1), chave)   # sem azul, verde nem "bom"
+                valor = no.get('Literal', {}).get('Value', '')
+                if re.fullmatch(r"'#[0-9A-Fa-f]{6}'", valor):
+                    self.assertIn(valor.strip("'").upper(), permitidas, chave)
+
+    def test_tema_do_kit_registrado(self):
+        relatorio = ler(self.definicao / 'report.json')
+        tema = relatorio['themeCollection']['customTheme']
+        self.assertEqual(tema['type'], 'RegisteredResources')
+        pacote = next(p for p in relatorio['resourcePackages'] if p['type'] == 'RegisteredResources')
+        item = next(i for i in pacote['items'] if i['type'] == 'CustomTheme')
+        self.assertEqual(item['name'], tema['name'])
+        arquivo = self.saida / 'StaticResources' / 'RegisteredResources' / item['path']
+        self.assertEqual(ler(arquivo), ler(REPO / 'powerbi' / 'tema.json'))
+
+    def test_aponta_para_o_modelo_e_apaga_o_formato_antigo(self):
+        pbir = ler(self.saida / 'definition.pbir')
+        self.assertEqual(pbir['datasetReference'], {'byPath': {'path': '../painel-municipios-sp.SemanticModel'}})
+        self.assertFalse((self.saida / 'report.json').exists())
+
+
+class TesteRegerar(unittest.TestCase):
+    def test_regerar_apaga_visual_antigo_e_o_report_json_legado(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            saida = Path(tmp) / 'painel.Report'
+            (saida / 'definition' / 'pages' / 'velha' / 'visuals' / 'v').mkdir(parents=True)
+            (saida / 'report.json').write_text('{}', encoding='utf-8')
+            codigo, mensagem = gerar(saida)
+            self.assertEqual(codigo, 0, mensagem)
+            self.assertFalse((saida / 'definition' / 'pages' / 'velha').exists())
+            self.assertFalse((saida / 'report.json').exists())
+
 
 if __name__ == '__main__':
     unittest.main()
