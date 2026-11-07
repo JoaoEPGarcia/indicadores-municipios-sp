@@ -25,10 +25,11 @@ import pandas as pd
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / 'scripts'))
 import comum  # noqa: E402
+# O registro e os marcadores são os mesmos que scripts/verificar_textos.py confere.
+from comum import MACRO, MARCADOR, MODELO_README, NOME_NUMERO, NUMEROS_USADOS, PENDENTE, REGISTRO_TEX  # noqa: E402
 
 TRATADOS = RAIZ / 'dados' / 'tratados'
 TMDL = RAIZ / 'powerbi' / 'painel-municipios-sp.SemanticModel' / 'definition'
-PENDENTE = 'PENDENTE'
 
 # Verbo de cada Indicador para o título da Figura 1 ("Ibirá gasta 18,7% mais com saúde...").
 FRASE_INDICADOR = {
@@ -53,7 +54,7 @@ def fmt_int(v):
 
 class Registro(dict):
     def add(self, nome, valor, descricao, origem='scripts/numeros.py'):
-        if not re.fullmatch(r'Num[A-Za-z]+', nome):
+        if not re.fullmatch(NOME_NUMERO, nome):
             raise ValueError(f'nome de macro LaTeX inválido: {nome} (só letras depois de "Num")')
         if nome in self:
             raise ValueError(f'número repetido: {nome}')
@@ -240,19 +241,20 @@ def calcular():
 # ── saídas ──────────────────────────────────────────────────────────────
 def onde_aparece(N):
     """Procura cada número nos textos e no registro das figuras."""
-    fontes = {}
-    for caminho in [RAIZ / 'docs' / 'README.modelo.md', *sorted((RAIZ / 'relatorio').glob('**/*.tex'))]:
-        if caminho.exists() and caminho.name != 'numeros.tex':
-            fontes[caminho.relative_to(RAIZ).as_posix()] = caminho.read_text(encoding='utf-8')
+    usados = {}         # texto: os números que ele usa, por marcador ou macro
+    for caminho in [RAIZ / MODELO_README, *sorted((RAIZ / 'relatorio').glob('**/*.tex'))]:
+        if caminho.exists() and caminho != RAIZ / REGISTRO_TEX:
+            texto = caminho.read_text(encoding='utf-8')
+            usados[caminho.relative_to(RAIZ).as_posix()] = set(MARCADOR.findall(texto)) | set(MACRO.findall(texto))
     registros = {}      # figuras e planilha: cada gerador grava os números que imprime
-    for pasta in ('graficos', 'excel'):
-        arq = RAIZ / pasta / 'numeros_usados.json'
+    for usado in NUMEROS_USADOS:
+        arq = RAIZ / usado
         if arq.exists():
             for alvo, nomes in json.loads(arq.read_text(encoding='utf-8')).items():
-                registros[f'{pasta}/{alvo}'] = nomes
+                registros[f'{Path(usado).parent.as_posix()}/{alvo}'] = nomes
     onde = {}
     for nome in N:
-        lugares = [f for f, t in fontes.items() if re.search(r'\{\{' + nome + r'\}\}|\\' + nome + r'(?![A-Za-z])', t)]
+        lugares = [f for f, nomes in usados.items() if nome in nomes]
         lugares += [alvo for alvo, nomes in registros.items() if nome in nomes]
         onde[nome] = lugares
     return onde
@@ -264,7 +266,7 @@ def escrever_tex(N):
     for k, v in N.items():
         valor = v['valor'].replace('%', r'\%').replace('−', '$-$')
         linhas.append(f'\\newcommand{{\\{k}}}{{{valor}}}')
-    destino = RAIZ / 'relatorio' / 'numeros.tex'
+    destino = RAIZ / REGISTRO_TEX
     destino.parent.mkdir(exist_ok=True)
     destino.write_text('\n'.join(linhas) + '\n', encoding='utf-8')
 
@@ -282,15 +284,15 @@ def escrever_canonicos(N, onde):
 
 
 def escrever_readme(N):
-    modelo = RAIZ / 'docs' / 'README.modelo.md'
+    modelo = RAIZ / MODELO_README
     if not modelo.exists():
         return
     texto = modelo.read_text(encoding='utf-8')
     texto = re.sub(r'<!--.*?-->\n?', '', texto, flags=re.S)
-    faltam = sorted(set(re.findall(r'\{\{(Num[A-Za-z]+)\}\}', texto)) - set(N))
+    faltam = sorted(set(MARCADOR.findall(texto)) - set(N))
     if faltam:
         sys.exit(f'README.modelo.md usa números que não existem: {faltam}')
-    texto = re.sub(r'\{\{(Num[A-Za-z]+)\}\}', lambda mm: N[mm.group(1)]['valor'], texto)
+    texto = MARCADOR.sub(lambda mm: N[mm.group(1)]['valor'], texto)
     (RAIZ / 'README.md').write_text(texto, encoding='utf-8')
 
 

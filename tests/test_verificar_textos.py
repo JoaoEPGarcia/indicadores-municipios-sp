@@ -165,6 +165,16 @@ class TesteVerificador(unittest.TestCase):
         self.assertIn('docs/README.modelo.md:3', saida)
         self.assertIn('NumCidades', saida)
 
+    def test_marcador_malformado_falha(self):
+        # scripts/numeros.py só troca {{NumX}} exato; qualquer outra forma sobraria no README.
+        for marcador in ['{{ NumMunicipios }}', '{{Num1}}', '{{numMunicipios}}']:
+            with self.subTest(marcador=marcador):
+                self.repo.escrever('docs/README.modelo.md', '# Indicadores\n\nSão ' + marcador + ' municípios.\n')
+                codigo, saida = self.repo.verificar()
+                self.assertEqual(codigo, 1, saida)
+                self.assertIn('docs/README.modelo.md:3', saida)
+                self.assertIn(marcador, saida)
+
     def test_numero_pendente_usado_no_modelo_falha(self):
         self.repo.escrever('docs/README.modelo.md', '''
             # Indicadores dos {{NumMunicipios}} municípios de SP

@@ -27,15 +27,16 @@ import sys
 import tempfile
 from pathlib import Path
 
+# O registro de números e os marcadores são os mesmos de scripts/numeros.py, que monta o README.
+from comum import DEFINICAO, MACRO, MARCADOR, MODELO_README, NOME_NUMERO, NUMEROS_USADOS, PENDENTE, REGISTRO_TEX
+
 RAIZ = Path(__file__).resolve().parent.parent
 
-MODELO_README = 'docs/README.modelo.md'
 README = 'README.md'                    # montado por scripts/numeros.py a partir do modelo
 RELATORIO_TEX = 'relatorio/relatorio.tex'
 RELATORIO_PDF = 'relatorio/relatorio.pdf'
-REGISTRO = 'relatorio/numeros.tex'      # a saída do registro de números (scripts/numeros.py)
-USADOS = ['graficos/numeros_usados.json', 'excel/numeros_usados.json']  # números impressos em figura e planilha
-PENDENTE = 'PENDENTE'
+# Tudo o que tem cara de marcador: o que não for {{NumX}} exato, scripts/numeros.py não troca.
+QUALQUER_MARCADOR = re.compile(r'\{\{[^{}\n]*\}\}')
 
 
 class Verificacao:
@@ -122,9 +123,6 @@ SINTAXE_LATEX = [
     (r'https?://[^\s}]+', 0),                                                # endereço
 ]
 
-MARCADOR = r'\{\{[^}]*\}\}'      # {{NumX}} no modelo do README
-MACRO = r'\\Num[A-Za-z]+'        # \NumX no LaTeX
-
 
 def numeros_digitados(texto, sintaxe, marcador):
     """(linha, número, trecho) de cada número que sobra fora de marcador, de sintaxe e das exceções."""
@@ -146,7 +144,7 @@ def conferir_digitados(v, caminho, texto):
     if caminho.endswith('.tex'):
         achados, uso = numeros_digitados(texto, SINTAXE_LATEX, MACRO), r'uma macro \Num...'
     else:
-        achados, uso = numeros_digitados(texto, SINTAXE_MARKDOWN, MARCADOR), 'um marcador {{Num...}}'
+        achados, uso = numeros_digitados(texto, SINTAXE_MARKDOWN, QUALQUER_MARCADOR), 'um marcador {{Num...}}'
     nome = f'nenhum número digitado em {caminho}'
     if achados:
         v.falha(nome, [f'{caminho}:{n}: número digitado "{num}" (use {uso}): {trecho}'
@@ -158,24 +156,27 @@ def conferir_digitados(v, caminho, texto):
 # ── marcadores, macros e PENDENTE ───────────────────────────────────────
 def ler_registro(raiz):
     """{nome: valor} da saída do registro de números (relatorio/numeros.tex), ou None se ela não existe."""
-    arq = raiz / REGISTRO
+    arq = raiz / REGISTRO_TEX
     if not arq.exists():
         return None
-    texto = arq.read_text(encoding='utf-8')
-    return dict(re.findall(r'^\\newcommand\{\\(Num[A-Za-z]+)\}\{(.*)\}\s*$', texto, flags=re.M))
+    return dict(DEFINICAO.findall(arq.read_text(encoding='utf-8')))
 
 
 def usos_no_modelo(texto):
-    """(onde, nome) de cada marcador {{...}} do modelo do README, fora de comentário."""
+    """(onde, nome) de cada marcador do modelo do README, fora de comentário. Um marcador fora da forma
+    {{NumX}} exata ("{{ NumX }}", "{{Num1}}") entra inteiro, para ser acusado."""
     texto = apagar(texto, r'<!--.*?-->', re.S)
-    return [(f'{MODELO_README}:{linha_de(texto, m.start())}', m.group(1).strip())
-            for m in re.finditer(r'\{\{([^}]*)\}\}', texto)]
+    usos = []
+    for m in QUALQUER_MARCADOR.finditer(texto):
+        certo = MARCADOR.fullmatch(m.group(0))
+        usos.append((f'{MODELO_README}:{linha_de(texto, m.start())}', certo.group(1) if certo else m.group(0)))
+    return usos
 
 
 def usos_no_latex(caminho, texto):
     r"""(onde, nome) de cada macro \Num... de um .tex do relatório, fora de comentário."""
     texto = apagar(texto, r'(?<!\\)%[^\n]*')
-    return [(f'{caminho}:{linha_de(texto, m.start())}', m.group(0)[1:]) for m in re.finditer(MACRO, texto)]
+    return [(f'{caminho}:{linha_de(texto, m.start())}', m.group(1)) for m in MACRO.finditer(texto)]
 
 
 def ler_tex(raiz):
@@ -195,7 +196,7 @@ def gerado(texto):
 def usos_nas_figuras(raiz):
     """(onde, nome) de cada número que figuras e planilha registram como impresso."""
     usos = []
-    for arq in USADOS:
+    for arq in NUMEROS_USADOS:
         if (raiz / arq).exists():
             for alvo, nomes in json.loads((raiz / arq).read_text(encoding='utf-8')).items():
                 usos += [(f'{arq} ({alvo})', nome) for nome in nomes]
@@ -209,12 +210,15 @@ def conferir_registro(v, raiz, usos):
         return
     registro = ler_registro(raiz)
     if registro is None:
-        v.falha(nome, [f'{REGISTRO} não existe: rode python scripts/numeros.py'])
+        v.falha(nome, [f'{REGISTRO_TEX} não existe: rode python scripts/numeros.py'])
         return
     problemas = []
     for onde, num in usos:
-        if num not in registro:
-            problemas.append(f'{onde}: {num} não existe no registro ({REGISTRO})')
+        if not re.fullmatch(NOME_NUMERO, num):
+            problemas.append(f'{onde}: "{num}" fora da forma {{{{NumX}}}} ("Num" e só letras, sem espaço): '
+                             'scripts/numeros.py não o troca pelo valor')
+        elif num not in registro:
+            problemas.append(f'{onde}: {num} não existe no registro ({REGISTRO_TEX})')
         elif registro[num] == PENDENTE:
             problemas.append(f'{onde}: {num} está {PENDENTE}')
     if problemas:
@@ -410,7 +414,7 @@ def conferir_texto_final(v, caminho, paginas, publicacao):
     problemas = []
     for onde, texto in paginas:
         linhas = texto.splitlines()
-        for m in re.finditer(PENDENTE + '|' + MARCADOR, texto):
+        for m in re.finditer(PENDENTE + '|' + QUALQUER_MARCADOR.pattern, texto):
             problemas.append(f'{onde}: "{m.group(0)}" em: {linhas[linha_de(texto, m.start()) - 1].strip()}')
         if publicacao:
             problemas += [f'{onde}: publicação na web em: {trecho}' for _, trecho in frases_de_publicacao(texto)]
@@ -448,7 +452,7 @@ def verificar(raiz, limite_pdflatex=600):
         v.pulada('modelo do README', f'{MODELO_README} ainda não existe')
     tex = ler_tex(raiz)
     for caminho, texto in tex.items():
-        if caminho == REGISTRO:   # o registro define as macros; não as usa
+        if caminho == REGISTRO_TEX:   # o registro define as macros; não as usa
             continue
         if not gerado(texto):
             conferir_digitados(v, caminho, texto)
