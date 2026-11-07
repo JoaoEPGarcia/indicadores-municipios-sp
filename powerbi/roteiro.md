@@ -17,7 +17,7 @@ Os termos seguem o `GLOSSARY.md` da raiz: Faixa de porte, Municípios parecidos,
    .venv\Scripts\python scripts\conferir_powerbi.py --completo
    ```
 
-   O script deve terminar com todas as células batendo e gravar `powerbi/resultado_conferencia.csv` e `powerbi/resultado_conferencia_completa.csv`. Se alguma célula não bater, o defeito está na medida, e o valor certo está no SQLite. Corrija no Desktop, salve (o TMDL se atualiza) e rode de novo.
+   O script deve terminar com todas as células batendo e gravar `powerbi/resultado_conferencia.csv` e `powerbi/resultado_conferencia_completa.csv`. Se alguma célula não bater, o defeito está na medida, e o valor certo está no SQLite. **A correção vai no TMDL**, que é a fonte das medidas: com o Desktop fechado, corrija a medida em `painel-municipios-sp.SemanticModel/definition/tables/Medidas.tmdl`, reabra o `.pbip`, atualize e rode o script de novo. (Se preferir testar a correção no Desktop, pode: ao salvar, o Desktop regrava o modelo em TMDL, e a medida corrigida fica no arquivo; confira o diff do TMDL antes de versionar. O que o Desktop grava na pasta `.Report` não vale: as páginas se regeneram pelo gerador, abaixo.)
 
 ## Como regenerar as páginas
 
@@ -29,7 +29,17 @@ Com o Desktop **fechado** (ele regrava a pasta `.Report` ao salvar), rode na rai
 
 O gerador apaga `painel-municipios-sp.Report/definition/` e o `report.json` do formato antigo, se houver, e grava de novo as quatro páginas, o `definition.pbir` (que aponta para o modelo por caminho relativo) e o tema do kit em `StaticResources/RegisteredResources/`. Nada dos dados é digitado no gerador: o município de exemplo vem de `scripts/comum.py`, o último ano observado e o ano-base dos reais vêm dos CSV, o nome do método escolhido vem do TMDL e as cores vêm do kit e do tema (`scripts/gerar_tema.py`). Depois, abra o `.pbip` e atualize.
 
-**Mudança feita no Desktop se perde na próxima geração.** Para mudar uma página, mude o gerador e este roteiro, e rode de novo. Os testes (`python -m unittest discover -s tests`) conferem, sem o Desktop, que todo campo usado existe no TMDL, que todo visual tem texto alternativo, a ordem das páginas e de tabulação, a sincronia das segmentações, o município de exemplo escolhido, que nenhum visual ordena municípios por nome e que as cores são só a de destaque e o neutro. O que os testes não veem é se o Desktop aceita cada propriedade de formato: isso só se vê ao abrir.
+**Mudança feita nas páginas pelo Desktop se perde na próxima geração**, porque o gerador reescreve a pasta `.Report`. Mudança no modelo (medida, formato, relação) não se perde: ela vai no TMDL, que o gerador não toca. Para mudar uma página, mude o gerador e este roteiro, e rode de novo. Os testes (`python -m unittest discover -s tests`) conferem, sem o Desktop, que todo campo usado existe no TMDL, que todo visual tem texto alternativo, a ordem das páginas e de tabulação, a sincronia das segmentações, o município de exemplo escolhido, que nenhum visual ordena municípios por nome e que as cores são só a de destaque e o neutro. O que os testes não veem é se o Desktop aceita cada propriedade de formato: isso só se vê ao abrir.
+
+## Se o Desktop recusar o relatório
+
+O modelo (`painel-municipios-sp.SemanticModel/`) e as páginas (`painel-municipios-sp.Report/`) são pastas separadas: um relatório que o Desktop recusa não estraga o modelo, e o modelo continua conferível. A mensagem do Desktop diz o arquivo e a propriedade que ele não aceitou; anote-a antes de fechar.
+
+1. **Feche o Desktop sem salvar** e regenere as páginas (seção acima). Muitas recusas vêm de uma pasta `.Report` misturada: sobra do formato antigo (`report.json`) ou página regravada pelo Desktop pela metade. O gerador apaga `definition/` e escreve tudo de novo. Abra o `.pbip` outra vez.
+2. **Se ainda recusar, abra só o modelo, com um relatório em branco.** Feche o Desktop e apague a pasta `painel-municipios-sp.Report` (ela está no git e volta com `git checkout -- powerbi/painel-municipios-sp.Report`). Abra o Desktop, crie um relatório em branco e escolha **Arquivo → Salvar como → Arquivos do projeto do Power BI (.pbip)**, com o nome `painel-municipios-sp`, numa pasta temporária. Copie de lá só a pasta `painel-municipios-sp.Report` para `powerbi/`: o `definition.pbir` dela aponta para `../painel-municipios-sp.SemanticModel`, que é o modelo do projeto. Abra `powerbi/painel-municipios-sp.pbip` e atualize: o modelo abre inteiro, sem páginas, e `scripts/conferir_powerbi.py` funciona igual, porque só consulta o modelo.
+3. **Corrija no gerador, e não no Desktop.** Com o modelo aberto, a propriedade recusada (anotada no início) se corrige em `scripts/gerar_relatorio_pbi.py`; feche o Desktop, rode o gerador (que substitui a pasta em branco pelas quatro páginas) e abra de novo. Se nada disso servir, as páginas podem ser montadas à mão sobre o modelo, seguindo as tabelas abaixo, que dizem o visual, os campos e o formato de cada uma.
+
+Em nenhum desses passos o modelo é apagado: as medidas, as consultas e as relações estão no TMDL, e é ele que importa para os números do README.
 
 ## O que o modelo já traz
 
