@@ -1,0 +1,76 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "p2_nota",
+  "position": {
+    "x": 24,
+    "y": 484,
+    "z": 10000,
+    "width": 320,
+    "height": 216,
+    "tabOrder": 9
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Cada ponto é um dos Municípios parecidos (mesma Faixa de porte) que tem dado no ano.",
+                    "textStyle": {
+                      "fontSize": "9pt",
+                      "fontFamily": "Lato"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "A página mostra posição e grupo, e não uma lista do maior ao menor: nenhum lado do eixo é, por si, melhor.",
+                    "textStyle": {
+                      "fontSize": "9pt",
+                      "fontFamily": "Lato"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Nota de leitura da dispersão.'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "visualHeader": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

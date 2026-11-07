@@ -1,6 +1,6 @@
 # Roteiro do painel no Power BI Desktop
 
-Este roteiro diz o que montar, página por página, sobre o modelo que já vem pronto em `painel-municipios-sp.pbip`, e quais capturas exportar no fim. O modelo semântico (consultas Power Query, relações, medidas DAX e formatos) está em TMDL, em `painel-municipios-sp.SemanticModel/definition/`, e é a fonte única das medidas: este roteiro só diz qual medida vai em qual visual. A tabela `powerbi/conferencia.md` traz o que cada medida tem de devolver, e `scripts/conferir_powerbi.py` confere.
+Este roteiro é a especificação legível das quatro páginas do painel: o que cada página mostra, em que posição, com que medida e em que formato, e quais capturas exportar no fim. Os visuais são **definidos em código (PBIR) sobre modelo em TMDL**: `scripts/gerar_relatorio_pbi.py` escreve as páginas em `painel-municipios-sp.Report/definition/`, um JSON por página e por visual, a partir deste roteiro ([ADR 0003](../docs/adr/0003-visuais-do-painel-em-codigo.md)). O modelo semântico (consultas Power Query, relações, medidas DAX e formatos) está em TMDL, em `painel-municipios-sp.SemanticModel/definition/`, e é a fonte única das medidas: o roteiro e o gerador só dizem qual medida vai em qual visual. A tabela `powerbi/conferencia.md` traz o que cada medida tem de devolver, e `scripts/conferir_powerbi.py` confere.
 
 Os termos seguem o `GLOSSARY.md` da raiz: Faixa de porte, Municípios parecidos, Mediana da faixa, Posição na faixa, Intervalo de previsão.
 
@@ -11,7 +11,7 @@ Os termos seguem o `GLOSSARY.md` da raiz: Faixa de porte, Municípios parecidos,
 3. **Abra `powerbi/painel-municipios-sp.pbip`** com dois cliques.
 4. Se o repositório não estiver em `C:\Users\Pichau\Desktop\indicadores-municipios-sp`, vá em **Página Inicial → Transformar dados → Editar parâmetros** e troque `PastaDados` pelo caminho da pasta `dados\tratados\` da sua cópia, **terminado em barra invertida**.
 5. **Página Inicial → Atualizar.** As consultas leem os CSV. A primeira atualização leva alguns segundos.
-6. **Confira o modelo antes de montar qualquer visual.** Com o Desktop aberto, rode no terminal, na raiz do repositório:
+6. **Confira o modelo.** Com o Desktop aberto, rode no terminal, na raiz do repositório:
 
    ```
    .venv\Scripts\python scripts\conferir_powerbi.py --completo
@@ -19,7 +19,17 @@ Os termos seguem o `GLOSSARY.md` da raiz: Faixa de porte, Municípios parecidos,
 
    O script deve terminar com todas as células batendo e gravar `powerbi/resultado_conferencia.csv` e `powerbi/resultado_conferencia_completa.csv`. Se alguma célula não bater, o defeito está na medida, e o valor certo está no SQLite. Corrija no Desktop, salve (o TMDL se atualiza) e rode de novo.
 
-**Se o Desktop não abrir o relatório** (mensagem sobre `report.json` ou tema), o modelo continua bom. Feche o Desktop, apague a pasta `painel-municipios-sp.Report`, abra o Desktop, crie um relatório em branco e escolha **Arquivo → Salvar como → Arquivos do projeto do Power BI (.pbip)**, com o nome `painel-municipios-sp`, numa pasta temporária. Copie de lá só a pasta `.Report` para `powerbi/` e abra o `.pbip` de novo. Depois aplique o tema em **Exibir → Temas → Procurar temas → `powerbi/tema.json`**.
+## Como regenerar as páginas
+
+Com o Desktop **fechado** (ele regrava a pasta `.Report` ao salvar), rode na raiz do repositório:
+
+```
+.venv\Scripts\python scripts\gerar_relatorio_pbi.py
+```
+
+O gerador apaga `painel-municipios-sp.Report/definition/` e o `report.json` do formato antigo, se houver, e grava de novo as quatro páginas, o `definition.pbir` (que aponta para o modelo por caminho relativo) e o tema do kit em `StaticResources/RegisteredResources/`. Nada dos dados é digitado no gerador: o município de exemplo vem de `scripts/comum.py`, o último ano observado e o ano-base dos reais vêm dos CSV, o nome do método escolhido vem do TMDL e as cores vêm do kit e do tema (`scripts/gerar_tema.py`). Depois, abra o `.pbip` e atualize.
+
+**Mudança feita no Desktop se perde na próxima geração.** Para mudar uma página, mude o gerador e este roteiro, e rode de novo. Os testes (`python -m unittest discover -s tests`) conferem, sem o Desktop, que todo campo usado existe no TMDL, que todo visual tem texto alternativo, a ordem das páginas e de tabulação, a sincronia das segmentações, o município de exemplo escolhido, que nenhum visual ordena municípios por nome e que as cores são só a de destaque e o neutro. O que os testes não veem é se o Desktop aceita cada propriedade de formato: isso só se vê ao abrir.
 
 ## O que o modelo já traz
 
@@ -35,84 +45,92 @@ Os termos seguem o `GLOSSARY.md` da raiz: Faixa de porte, Municípios parecidos,
 | `backtest_metodos`, `backtest_cobertura` | Teste contra o passado | nenhuma |
 | `Medidas` | todas as medidas, em pastas de exibição | |
 
-Todas as relações são 1:N, de direção única. As chaves e os valores brutos ficam ocultos: os visuais usam as dimensões e as medidas. O modelo desencoraja medidas implícitas, então arrastar uma coluna numérica para um visual não a soma: use sempre uma medida.
+Todas as relações são 1:N, de direção única. As chaves e os valores brutos ficam ocultos: os visuais usam as dimensões e as medidas. O modelo desencoraja medidas implícitas, então todo número de visual é uma medida.
 
 ## Formato comum a todas as páginas
 
-- Tamanho da página: 16:9 (1280 × 720). Fundo branco (o tema já aplica).
-- Título da página: caixa de texto, Lato Bold 20, cor de texto do tema.
-- **Cor.** O Município selecionado sai na **cor 1 do tema** (vermelho de destaque), só em marca: linha, ponto, contorno. A mediana sai na **cor 2** (cinza neutro). Os quartis saem num cinza mais claro (cor 2, 60% mais clara no seletor). Número grande de cartão sai na cor de texto, e não em vermelho: o tema já faz isso.
-- Nenhum visual usa cor de "bom" ou "ruim": nenhum Indicador tem um lado melhor que valha para todo município.
+- Tamanho da página: 16:9 (1280 × 720), ajustada à janela. Fundo branco (o tema aplica).
+- Título da página: caixa de texto, Lato Bold 20, cor de texto do tema. É o primeiro item da ordem de tabulação.
+- **Cor.** O Município selecionado sai na **cor 1 do tema** (vermelho de destaque), só em marca: linha, ponto, coluna. A mediana e o contexto saem na **cor 2** (cinza neutro). Os quartis saem na cor 2, 60% mais clara. Número grande de cartão sai na cor de texto, e não em vermelho. Nenhuma outra cor do tema aparece.
+- Nenhum visual usa cor de "bom" ou "ruim": nenhum Indicador tem um lado melhor que valha para todo município. Nenhuma tabela tem formatação condicional de cor.
 - Texto alternativo em todo visual (**Formato → Geral → Texto alternativo**), dizendo a pergunta que o visual responde.
+- O cabeçalho dos visuais (os ícones de foco e de filtro sobre o visual) fica oculto.
+- Segmentações de seleção única, com o estado padrão já escolhido: o município de exemplo e, no Indicador, "Despesa com saúde por habitante".
 
 ## Página 1, "Município"
 
 Pergunta: **onde este município está, e onde estão os parecidos?**
 
-| Posição (x, y, l × a) | Visual | Campos | Formato |
-|---|---|---|---|
-| 24, 16, 640 × 40 | Caixa de texto | "Indicadores do município" | título |
-| 24, 64, 320 × 56 | Segmentação, lista suspensa | `dim_municipio[municipio]` | **Seleção única** ligada; pesquisa ligada. Deixe Ibirá escolhido |
-| 360, 64, 260 × 56 | Cartão | `[Faixa de porte]` | rótulo "Faixa de porte" |
-| 640, 64, 200 × 56 | Cartão | `[Municípios na faixa]` | rótulo "Municípios na faixa" |
-| 860, 64, 200 × 56 | Cartão | `[População (Censo 2022)]` | rótulo "População (Censo 2022)" |
-| 24, 136, 1232 × 112 | 4 cartões de 296 × 112 (ou um visual **Cartão (novo)** com 4 valores) | `[Último valor]`, cada um filtrado (painel de filtros do visual) a um Indicador: Receita corrente por habitante, Despesa com saúde por habitante, Despesa com educação por habitante, Dependência de transferências. Valor de referência: `[Último valor da faixa]` | rótulo "mediana da faixa" no valor de referência |
-| 800, 264, 456 × 160 | Segmentação, botões | `dim_indicador[nome]` | **Seleção única**. No filtro do visual, tire "Receita corrente total (R$ milhões)": ela é da página 3 |
-| 24, 264, 760 × 440 | Gráfico de linhas | Eixo X: `dim_ano[ano]`. Eixo Y: `[Valor]`, `[Mediana da faixa]`, `[1º quartil da faixa]`, `[3º quartil da faixa]` | `[Valor]`: cor 1, 2,5 pt, com marcador. Mediana: cor 2, 2 pt. Quartis: cinza claro, 1 pt. Título do visual: **fx → `[Título da evolução]`**. Legenda desligada; ligue **Rótulos de série** (rótulo direto na ponta da linha) |
-| 800, 440, 456 × 264 | Tabela | `dim_ano[ano]`, `[Valor formatado]`, `[Mediana da faixa]`, `[Diferença para a mediana]`, `[Posição na faixa]` | linhas em zebra (o tema já faz); sem formatação condicional de cor |
-| 24, 708, 1232 × 12 | Caixa de texto | "A sombra cinza vai do 1º ao 3º quartil dos municípios parecidos. Estar acima ou abaixo da mediana não é, por si, bom nem ruim." | 9 pt |
+| Tab | Posição (x, y, l × a) | Visual | Campos | Formato |
+|---|---|---|---|---|
+| 0 | 24, 16, 900 × 40 | Caixa de texto | "Indicadores do município" | título |
+| 1 | 24, 64, 320 × 56 | Segmentação, lista suspensa | `dim_municipio[municipio]` | seleção única; pesquisa ligada; o município de exemplo escolhido. Sincronizada com a página 3 |
+| 2 | 800, 264, 456 × 168 | Segmentação, lista | `dim_indicador[nome]` | seleção única; filtro do visual tira a Receita corrente total (`indicador_id` ≠ `receita_total`), que é da página 3. Sincronizada com a página 2 |
+| 3 | 24, 264, 760 × 436 | Gráfico de linhas | Eixo X: `dim_ano[ano]` (categórico). Eixo Y: `[Valor]`, `[Mediana da faixa]`, `[1º quartil da faixa]`, `[3º quartil da faixa]` | `[Valor]`: cor 1, 2,5 pt, com marcador. Mediana: cor 2, 2 pt. Quartis: cor 2 clara, 1 pt. Título do visual: **fx → `[Título da evolução]`**. Legenda desligada, rótulos de série ligados. Filtro do visual: ano até o último observado |
+| 4 | 360, 64, 260 × 56 | Cartão | `[Faixa de porte]` | rótulo "Faixa de porte" |
+| 5 | 640, 64, 200 × 56 | Cartão | `[Municípios na faixa]` | rótulo "Municípios na faixa" |
+| 6 | 860, 64, 200 × 56 | Cartão | `[População (Censo 2022)]` | rótulo "População (Censo 2022)" |
+| 7 a 10 | 24 + 312·i, 136, 296 × 112 | 4 cartões de várias linhas | `[Último valor]` (rótulo "município"), `[Último valor da faixa]` ("mediana da faixa") e `[Ano do último valor]` ("ano"), cada cartão preso por filtro do visual a um Indicador: Receita corrente por habitante, Despesa com saúde por habitante, Despesa com educação por habitante, Dependência de transferências | título do visual: o nome do Indicador. A segmentação de Indicador **não** filtra estes cartões (interação desligada na página) |
+| 11 | 800, 440, 456 × 260 | Tabela | `dim_ano[ano]`, `[Valor formatado]`, `[Mediana da faixa]`, `[Diferença para a mediana]`, `[Posição na faixa]` | ordenada por ano; linhas em zebra (o tema faz); sem formatação condicional de cor. Filtro do visual: ano até o último observado |
+| 12 | 24, 700, 1232 × 20 | Caixa de texto | "As linhas cinza-claras são o 1º e o 3º quartil dos Municípios parecidos. Estar acima ou abaixo da mediana não é, por si, bom nem ruim." | 9 pt |
 
-O eixo X mostra anos até o último previsto. No gráfico de linhas, filtre `dim_ano[ano]` para "é menor ou igual a" o último ano observado, ou deixe o eixo cortar sozinho onde as medidas ficam em branco (**Formato → Eixo X → Mostrar itens sem dados** desligado).
+O filtro "ano até o último observado" usa o maior ano de `indicadores_longo.csv`, lido pelo gerador: sem ele, a tabela mostraria "sem dado" nos anos só previstos.
 
 ## Página 2, "Comparação na faixa"
 
 Pergunta: **o município está no meio ou na ponta do grupo?**
 
-Esta página usa a tabela solta `sel_municipio`, e não `dim_municipio`, na segmentação de município. O motivo: a dispersão tem de mostrar **todos** os Municípios parecidos. Se a segmentação filtrasse `dim_municipio`, sobraria um ponto só. Se a interação fosse desligada (**Editar interações**), a medida que separa a faixa também deixaria de enxergar o município escolhido. A tabela solta resolve os dois lados: ela não filtra nada, e as medidas "do escolhido" a leem.
+Esta página usa a tabela solta `sel_municipio`, e não `dim_municipio`, na segmentação de município. O motivo: a dispersão tem de mostrar **todos** os Municípios parecidos. Se a segmentação filtrasse `dim_municipio`, sobraria um ponto só. Se a interação fosse desligada, a medida que separa a faixa também deixaria de enxergar o município escolhido. A tabela solta resolve os dois lados: ela não filtra nada, e as medidas "do escolhido" a leem.
 
-| Visual | Campos | Formato |
-|---|---|---|
-| Segmentação, lista suspensa, seleção única | `sel_municipio[municipio]` | Ibirá escolhido |
-| Segmentação, botões, seleção única | `dim_indicador[nome]` | **Sincronize com a página 1** (Exibir → Sincronizar segmentações) |
-| Segmentação, lista suspensa, seleção única | `dim_ano[ano]` | escolha o último ano em que o Indicador tem dado |
-| Gráfico de dispersão | Valores (detalhes): `dim_municipio[municipio]`. Eixo X: `[Valor]`. Eixo Y: `[População (Censo 2022)]`, em **escala logarítmica** | Filtro do visual: `[Na faixa do escolhido]` **é 1**. Cor dos pontos: **fx → Regras → `[É o escolhido]`**: se = 1, cor 1 do tema; senão, cinza claro. Ponto maior para o escolhido: em **Marcadores → Tamanho**, use a mesma regra |
-| Cartão | `[Posição do escolhido]` | rótulo "Posição na faixa (0% = menor valor, 100% = maior)" |
-| Cartão | `[Valor do escolhido]` | |
-| Cartão | `[Mediana da faixa do escolhido]` | |
-| Cartão | `[Diferença do escolhido]` | |
+| Tab | Posição (x, y, l × a) | Visual | Campos | Formato |
+|---|---|---|---|---|
+| 0 | 24, 16, 900 × 40 | Caixa de texto | "Comparação na faixa" | título |
+| 1 | 24, 64, 320 × 56 | Segmentação, lista suspensa | `sel_municipio[municipio]` | seleção única; o município de exemplo escolhido |
+| 2 | 24, 136, 320 × 260 | Segmentação, lista | `dim_indicador[nome]` | seleção única; **sincronizada com a página 1**; sem a Receita corrente total |
+| 3 | 24, 412, 320 × 56 | Segmentação, lista suspensa | `dim_ano[ano]` | seleção única; o último ano em que a Despesa com saúde por habitante tem dado (lido dos CSV) |
+| 4 | 360, 64, 600 × 636 | Gráfico de dispersão | Detalhes: `dim_municipio[municipio]`. Eixo X: `[Valor]`. Eixo Y: `[População (Censo 2022)]`, em **escala logarítmica** | Filtro do visual: `[Na faixa do escolhido]` **é 1**. Cor dos pontos: **fx → Regras → `[É o escolhido]`**: 1 na cor 1, 0 no cinza neutro. Legenda e rótulos dos pontos desligados |
+| 5 | 980, 64, 276 × 140 | Cartão | `[Posição do escolhido]` | rótulo "Posição na faixa (0% = menor valor, 100% = maior)" |
+| 6 | 980, 216, 276 × 140 | Cartão | `[Valor do escolhido]` | rótulo "Valor do município" |
+| 7 | 980, 368, 276 × 140 | Cartão | `[Mediana da faixa do escolhido]` | rótulo "Mediana da faixa" |
+| 8 | 980, 520, 276 × 140 | Cartão | `[Diferença do escolhido]` | rótulo "Diferença para a mediana" |
+| 9 | 24, 484, 320 × 216 | Caixa de texto | o que é cada ponto, e que a página mostra posição e grupo, e não lista | 9 pt |
 
-Sem ranking por nome: a página mostra posição e grupo, e não uma lista do "pior" ao "melhor".
+Sem ranking por nome: a página mostra posição e grupo, e não uma lista do "pior" ao "melhor". Todos os pontos têm o mesmo tamanho; o escolhido se distingue só pela cor.
 
 ## Página 3, "Previsão da receita"
 
 Pergunta: **quanto de receita o município pode esperar nos próximos três anos, e com que margem?**
 
-| Visual | Campos | Formato |
-|---|---|---|
-| Segmentação de município | `dim_municipio[municipio]` | sincronizada com a página 1 |
-| Gráfico de linhas | Eixo X: `dim_ano[ano]`. Eixo Y: `[Receita observada]`, `[Receita prevista (linha)]`, `[Limite inferior 80%]`, `[Limite superior 80%]`, `[Limite inferior 95%]`, `[Limite superior 95%]` | Observada: cor 1, sólida, 2,5 pt, com marcador. Prevista: cor 1, **tracejada**, 2 pt. Intervalo de 80%: cor 1, 1 pt. Intervalo de 95%: cor 2, 1 pt, pontilhada. Eixo Y em R$ milhões, sem forçar o zero, e diga isso no subtítulo do visual |
-| Cartão | `[Receita prevista no último ano]` | rótulo "R$ milhões, a preços de 2025" |
-| Caixa de texto com valor dinâmico | `[Texto da previsão]` (Inserir → Caixa de texto → **+ Valor**) | 14 pt |
-| Caixa de texto fixa | o aviso abaixo | 10 pt, sobre fundo zebra |
+| Tab | Posição (x, y, l × a) | Visual | Campos | Formato |
+|---|---|---|---|---|
+| 0 | 24, 16, 900 × 40 | Caixa de texto | "Previsão da receita" | título |
+| 1 | 24, 64, 320 × 56 | Segmentação, lista suspensa | `dim_municipio[municipio]` | seleção única; **sincronizada com a página 1** |
+| 2 | 24, 136, 840 × 480 | Gráfico de linhas | Eixo X: `dim_ano[ano]` (categórico). Eixo Y: `[Receita observada]`, `[Receita prevista (linha)]`, `[Limite inferior 80%]`, `[Limite superior 80%]`, `[Limite inferior 95%]`, `[Limite superior 95%]` | Observada: cor 1, sólida, 2,5 pt, com marcador. Prevista: cor 1, **tracejada**, 2 pt. Intervalo de 80%: cor 1, 1 pt. Intervalo de 95%: cor 2, 1 pt, pontilhada. Eixo Y sem forçar o zero; o subtítulo diz "R$ milhões, a preços de" o ano-base e que o eixo não começa no zero. Legenda desligada, rótulos de série ligados |
+| 3 | 880, 136, 376 × 120 | Cartão | `[Receita prevista no último ano]` | rótulo "Receita prevista no último ano, R$ milhões, a preços de" o ano-base |
+| 4 | 880, 272, 376 × 344 | Cartão | `[Texto da previsão]` | 14 pt, quebra de linha, sem rótulo: a frase com o valor e os dois intervalos |
+| 5 | 24, 632, 1232 × 80 | Caixa de texto | o aviso abaixo | 10 pt, sobre fundo zebra |
 
-Aviso (copie como está): "Previsão simples, sem informação de fora da série: repete a tendência recente da receita do município. Não leva em conta mudança de lei, de alíquota, de convênio nem de gestão. O intervalo mostra o quanto o método errou ao prever o passado de municípios do mesmo porte, alargado até a cobertura do teste chegar ao nível prometido. A página "Como ler" mostra quanto ele cobriu em cada ano deixado de fora. Projeto de portfólio feito com dado público."
+O ano-base é o ano anterior ao primeiro ano previsto em `previsao_receita_total.csv`, o mesmo que a medida `[Ano de partida da previsão]` calcula.
+
+Aviso: "Previsão simples, sem informação de fora da série: repete a tendência recente da receita do município. Não leva em conta mudança de lei, de alíquota, de convênio nem de gestão. O intervalo mostra o quanto o método errou ao prever o passado de municípios do mesmo porte, alargado até a cobertura do teste chegar ao nível prometido. A página "Como ler" mostra quanto ele cobriu em cada ano deixado de fora. Projeto de portfólio feito com dado público."
 
 ## Página 4, "Como ler, fontes e limites"
 
-| Visual | Campos |
-|---|---|
-| Tabela | `dim_indicador[nome]`, `[unidade]`, `[formula]`, `[fonte]`, `[periodicidade]`, `[meta]` |
-| Gráfico de linhas | Eixo X: `backtest_metodos[horizonte]`. Eixo Y: `[Erro médio absoluto]`. Legenda: `backtest_metodos[metodo_nome]`. A tendência dos 3 últimos anos na cor 1, os outros dois métodos na cor 2 |
-| Gráfico de colunas | Eixo X: `backtest_cobertura[origem_fora]`. Eixo Y: `[Cobertura com ajuste]`. Filtro do visual: `backtest_cobertura[nivel]` = 80. Linha de referência constante em 80% (**Análise → Linha constante**). A origem com menor cobertura na cor 1, as outras na cor 2 (**fx → Regras**) |
-| Caixa de texto | Fontes e licenças (resumo da seção "Fontes" do README) e os cuidados: degrau do Censo 2022 nas séries por habitante; Ideb bienal; município sem rede municipal fica sem Ideb |
+| Tab | Posição (x, y, l × a) | Visual | Campos | Formato |
+|---|---|---|---|---|
+| 0 | 24, 16, 900 × 40 | Caixa de texto | "Como ler, fontes e limites" | título |
+| 1 | 24, 64, 800 × 320 | Tabela | `dim_indicador[nome]`, `[unidade]`, `[formula]`, `[fonte]`, `[periodicidade]`, `[meta]` | quebra de linha no cabeçalho e nos valores |
+| 2 | 24, 400, 600 × 304 | Gráfico de linhas | Eixo X: `backtest_metodos[horizonte]` (categórico). Eixo Y: `[Erro médio absoluto]`. Legenda: `backtest_metodos[metodo_nome]` | o método escolhido (a tendência dos 3 últimos anos) na cor 1, os outros dois na cor 2; título com o nome do método escolhido, lido do TMDL |
+| 3 | 640, 400, 616 × 304 | Gráfico de colunas | Eixo X: `backtest_cobertura[origem_fora]` (categórico). Eixo Y: `[Cobertura com ajuste]`, começando no zero | Filtro do visual: `backtest_cobertura[nivel]` = 80 (o menor nível dos CSV). Linha constante tracejada em 80%. A origem com menor cobertura na cor 1, as outras na cor 2 (a mesma conta de `scripts/numeros.py`) |
+| 4 | 840, 64, 416 × 320 | Caixa de texto | fontes e licenças (resumo da seção "Fontes" do README) e os cuidados: degrau do Censo 2022 nas séries por habitante; Ideb bienal; município sem rede municipal fica sem Ideb; Municípios parecidos é só porte | 10 pt |
 
 ## Ordem de tabulação e acessibilidade
 
-**Exibir → Painel de seleção → Ordem de tabulação**: segmentação de município, segmentação de Indicador, visual principal, cartões, tabela. O azul e o vermelho cheios aparecem só em marca e em número grande, nunca em texto pequeno.
+A coluna "Tab" de cada tabela acima é a ordem de tabulação gravada (**Exibir → Painel de seleção → Ordem de tabulação** mostra a mesma): título, segmentação de município, segmentação de Indicador, outras segmentações, visual principal, cartões, tabela, notas. O azul e o vermelho cheios aparecem só em marca e em número grande, nunca em texto pequeno.
 
 ## Capturas
 
-Salve o relatório. Deixe as segmentações exatamente como abaixo antes de cada captura. O município de exemplo é Ibirá, sorteado com semente fixa (`scripts/comum.py`).
+Abra o relatório e atualize. As segmentações já abrem no estado de cada captura; confira antes de exportar. O município de exemplo é Ibirá, sorteado com semente fixa (`scripts/comum.py`).
 
 | Arquivo | Página | Estado |
 |---|---|---|
@@ -127,4 +145,4 @@ Como exportar:
 1. **Páginas 1 a 4:** **Arquivo → Exportar → Exportar para PDF**, salvando `powerbi/capturas/paginas.pdf`. Depois rode `.venv\Scripts\python scripts\capturas.py`, que corta o PDF em um PNG por página, com os nomes da tabela.
 2. **Visão de modelo:** o Desktop não exporta essa visão. Use **Win + Shift + S**, recorte a área do diagrama e salve como `powerbi/capturas/05-modelo.png`.
 
-Depois das capturas, avise: o README e o relatório só passam a mostrar o painel montado a partir daí.
+Depois das capturas, avise: o README e o relatório só passam a mostrar o painel a partir daí, e dizem que os visuais são definidos em código (PBIR) sobre modelo em TMDL.

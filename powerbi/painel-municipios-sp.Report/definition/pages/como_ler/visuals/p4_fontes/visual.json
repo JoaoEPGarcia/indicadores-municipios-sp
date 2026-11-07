@@ -1,0 +1,76 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "p4_fontes",
+  "position": {
+    "x": 840,
+    "y": 64,
+    "z": 5000,
+    "width": 416,
+    "height": 320,
+    "tabOrder": 4
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Fontes. Receitas e despesas: Siconfi, Tesouro Nacional (DCA, anexos I-C e I-E). População, PIB dos Municípios e IPCA: IBGE. Ideb: INEP. Consultas de pré-natal: SINASC, Ministério da Saúde (DataSUS). Todas pedem que se credite a fonte; o README traz a condição de uso de cada uma.",
+                    "textStyle": {
+                      "fontSize": "10pt",
+                      "fontFamily": "Lato"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Cuidados. A população muda de base com o Censo 2022, e as séries por habitante dão um degrau entre 2021 e 2022 nos municípios que o Censo corrigiu. O Ideb é bienal, e município sem rede municipal fica sem Ideb. Municípios parecidos quer dizer só a mesma Faixa de porte.",
+                    "textStyle": {
+                      "fontSize": "10pt",
+                      "fontFamily": "Lato"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Fontes, licenças e cuidados de leitura.'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "visualHeader": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

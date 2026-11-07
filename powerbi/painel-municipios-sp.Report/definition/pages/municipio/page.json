@@ -1,0 +1,30 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/page/2.1.0/schema.json",
+  "name": "municipio",
+  "displayName": "Município",
+  "displayOption": "FitToPage",
+  "height": 720,
+  "width": 1280,
+  "visualInteractions": [
+    {
+      "source": "p1_indicador",
+      "target": "p1_resumo_receita_pc",
+      "type": "NoFilter"
+    },
+    {
+      "source": "p1_indicador",
+      "target": "p1_resumo_saude_pc",
+      "type": "NoFilter"
+    },
+    {
+      "source": "p1_indicador",
+      "target": "p1_resumo_educacao_pc",
+      "type": "NoFilter"
+    },
+    {
+      "source": "p1_indicador",
+      "target": "p1_resumo_dependencia_transf",
+      "type": "NoFilter"
+    }
+  ]
+}
