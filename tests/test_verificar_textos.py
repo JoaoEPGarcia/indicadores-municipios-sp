@@ -128,6 +128,18 @@ class TesteVerificador(unittest.TestCase):
         codigo, saida = self.repo.verificar()
         self.assertEqual(codigo, 0, saida)
 
+    def test_so_o_numero_do_proprio_ato_normativo_passa(self):
+        self.repo.escrever('docs/README.modelo.md', '''
+            # Indicadores dos {{NumMunicipios}} municípios de SP
+
+            Pela Lei 8.080/1990, pela Lei Complementar nº 101/2000 e pela Portaria n.º 1.234.
+            Segundo a Portaria, 45 municípios declaram tarde.
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('docs/README.modelo.md:4: número digitado "45"', saida)
+        self.assertNotIn('README.modelo.md:3', saida)
+
     def test_marcador_que_nao_existe_no_registro_falha(self):
         self.repo.escrever('docs/README.modelo.md', '''
             # Indicadores dos {{NumMunicipios}} municípios de SP

@@ -73,8 +73,11 @@ def linha_de(texto, pos):
 EXCECOES = [
     # ano no nome de uma fonte: o "Censo 2022" é a pesquisa, e não um recorte escolhido pelo estudo
     r'\bCenso(?: Demográfico| Escolar)? \d{4}\b',
-    # número de ato normativo: "Portaria STN nº 642/2019", "Lei 12.527/2011"
-    r'\b(?:Lei|Portaria|Decreto|Resolução)\b[^\d\n]{0,20}[\d./]+',
+    # o número do próprio ato normativo, logo depois do nome (com o órgão e "nº" no meio, se houver):
+    # "Lei 8.080/1990", "Portaria STN nº 642/2019", "Lei Complementar nº 101/2000". Outro número na
+    # mesma frase ("Segundo a Portaria, 45 municípios") continua acusado.
+    r'\b(?:Lei|Portaria|Decreto|Resolução)(?:[ -](?:[A-Z][A-Za-z]*(?:/[A-Z]+)?)){0,2}'
+    r'\s+(?:n\.?\s?[º°o]\.?\s*)?\d[\d.]*(?:/\d{2,4})?',
     # versão no nome de uma licença: "CC BY 4.0", "CC BY-ND 3.0" (seção de Fontes e licenças)
     r'\bCC BY(?:-[A-Z]{2})*\s+\d\.\d\b',
     # nome de arquivo: "01-painel-municipio.png", "backtest_2015.csv"
