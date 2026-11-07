@@ -25,8 +25,9 @@ SAIDAS = [
 
 # A Lato precisa estar instalada no Windows (ver powerbi/roteiro.md, passo 0). Sem ela, o Power BI
 # cai para a próxima da lista.
-FONTE = "Lato, 'Segoe UI', sans-serif"
-FONTE_TITULO = "'Lato Bold', Lato, 'Segoe UI Semibold', sans-serif"
+FAMILIA = 'Lato'          # a fonte do kit; a planilha (scripts/montar_excel.py) usa a mesma
+FONTE = f"{FAMILIA}, 'Segoe UI', sans-serif"
+FONTE_TITULO = f"'{FAMILIA} Bold', {FAMILIA}, 'Segoe UI Semibold', sans-serif"
 
 
 def zebra():

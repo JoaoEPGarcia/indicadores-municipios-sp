@@ -22,80 +22,18 @@ import csv
 import glob
 import math
 import os
-import re
 import sqlite3
 import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from comum import ler_conferencia  # noqa: E402
+
 RAIZ = Path(__file__).resolve().parent.parent
-CONFERENCIA = RAIZ / 'powerbi' / 'conferencia.md'
 SAIDA = RAIZ / 'powerbi' / 'resultado_conferencia.csv'
 SAIDA_COMPLETA = RAIZ / 'powerbi' / 'resultado_conferencia_completa.csv'
 SQLITE = RAIZ / 'dados' / 'tratados' / 'amostra.sqlite'
-
-# Colunas da tabela de cada município em conferencia.md → medida DAX
-COLUNAS_INDICADOR = {
-    '`[Valor]` 2023': 'Valor',
-    '`[Mediana da faixa]`': 'Mediana da faixa',
-    '`[1º quartil da faixa]`': '1º quartil da faixa',
-    '`[3º quartil da faixa]`': '3º quartil da faixa',
-    '`[Diferença para a mediana]`': 'Diferença para a mediana',
-    '`[Posição na faixa]`': 'Posição na faixa',
-    'Municípios na faixa com dado': 'Municípios com dado na faixa',
-}
-COLUNAS_PREVISAO = {
-    '`[Receita prevista]`': 'Receita prevista',
-    '`[Limite inferior 80%]`': 'Limite inferior 80%',
-    '`[Limite superior 80%]`': 'Limite superior 80%',
-}
-
-
-# ── leitura de conferencia.md ────────────────────────────────────────────
-def numero_br(texto):
-    """'−22,42%' → (-0.2242, 4 casas); '5176,4883' → (5176.4883, 4); '123' → (123.0, 0)."""
-    t = texto.strip().replace('−', '-').replace('.', '')
-    pct = t.endswith('%')
-    t = t.rstrip('%').replace(',', '.')
-    casas = len(t.split('.')[1]) if '.' in t else 0
-    v = float(t)
-    if pct:
-        return v / 100, casas + 2
-    return v, casas
-
-
-def linhas_tabela(bloco):
-    return [[c.strip() for c in l.strip().strip('|').split('|')] for l in bloco if l.strip().startswith('|')]
-
-
-def ler_conferencia():
-    """Devolve a lista de células: dict(municipio, indicador, ano, medida, esperado, casas)."""
-    texto = CONFERENCIA.read_text(encoding='utf-8')
-    ano_ref = int(re.search(r'\[Valor\]` (\d{4})', texto).group(1))
-    celulas = []
-    for secao in re.split(r'^## ', texto, flags=re.M)[1:]:
-        municipio = secao.splitlines()[0].strip()
-        tabelas = re.split(r'\n\s*\n', secao)
-        for t in tabelas:
-            linhas = linhas_tabela(t.splitlines())
-            if len(linhas) < 3:
-                continue
-            cab, corpo = linhas[0], linhas[2:]
-            if cab[0] == 'Indicador':
-                for l in corpo:
-                    for col, valor in zip(cab[1:], l[1:]):
-                        if col in COLUNAS_INDICADOR:
-                            v, casas = numero_br(valor)
-                            celulas.append(dict(municipio=municipio, indicador=l[0], ano=ano_ref,
-                                                medida=COLUNAS_INDICADOR[col], esperado=v, casas=casas))
-            elif cab[0] == 'Ano':
-                for l in corpo:
-                    for col, valor in zip(cab[1:], l[1:]):
-                        if col in COLUNAS_PREVISAO:
-                            v, casas = numero_br(valor)
-                            celulas.append(dict(municipio=municipio, indicador='receita_total', ano=int(l[0]),
-                                                medida=COLUNAS_PREVISAO[col], esperado=v, casas=casas))
-    return celulas
 
 
 # ── conexão com o Analysis Services do Power BI Desktop ──────────────────

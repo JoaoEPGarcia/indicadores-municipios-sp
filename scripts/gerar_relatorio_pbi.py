@@ -17,10 +17,10 @@ Depois de gerar, abra `powerbi/painel-municipios-sp.pbip` no Power BI Desktop e 
 import argparse
 import csv
 import json
-import re
 import shutil
 import sys
-from collections import defaultdict
+from collections import defaultdict, namedtuple
+from enum import IntEnum
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -29,10 +29,10 @@ sys.path.insert(0, str(RAIZ / 'scripts'))
 import comum  # noqa: E402
 import gerar_tema  # noqa: E402  (também põe estilo/ no caminho)
 import estilo_portfolio as ep  # noqa: E402
+import tmdl  # noqa: E402
 
 SAIDA_PADRAO = RAIZ / 'powerbi' / 'painel-municipios-sp.Report'
 MODELO = '../painel-municipios-sp.SemanticModel'
-TMDL_TABELAS = RAIZ / 'powerbi' / 'painel-municipios-sp.SemanticModel' / 'definition' / 'tables'
 
 # Versões dos esquemas do PBIR. São as que o Power BI Desktop grava desde março de 2026
 # (relatório 3.2.0, página 2.1.0, visual 2.7.0); o Desktop lê estas e as anteriores.
@@ -112,9 +112,21 @@ def condicao_em(campo, valores, negar=False):
     return {'Not': {'Expression': em}} if negar else em
 
 
+class Comparacao(IntEnum):
+    """O ComparisonKind das condições do PBIR: o número que o JSON grava para cada comparação."""
+    IGUAL = 0
+    MAIOR = 1
+    MAIOR_OU_IGUAL = 2
+    MENOR = 3
+    MENOR_OU_IGUAL = 4
+
+
+def comparacao(tipo, esquerda, valor):
+    return {'Comparison': {'ComparisonKind': int(tipo), 'Left': esquerda, 'Right': literal(valor)}}
+
+
 def condicao_comparacao(campo, tipo, valor):
-    # ComparisonKind: 0 igual, 1 maior, 2 maior ou igual, 3 menor, 4 menor ou igual
-    return {'Comparison': {'ComparisonKind': tipo, 'Left': na_fonte(campo, 'f'), 'Right': literal(valor)}}
+    return comparacao(tipo, na_fonte(campo, 'f'), valor)
 
 
 def filtro_semantico(campo, condicao):
@@ -239,7 +251,7 @@ def cor_da_serie(campo, cor):
 
 def cor_do_valor(campo, valor, cor):
     """Cor de um valor da legenda ou do eixo (o seletor aponta para o valor da coluna)."""
-    alvo = {'Comparison': {'ComparisonKind': 0, 'Left': campo, 'Right': literal(valor)}}
+    alvo = comparacao(Comparacao.IGUAL, campo, valor)
     return {'properties': {'fill': cor}, 'selector': {'data': [{'scopeId': alvo}]}}
 
 
@@ -256,23 +268,17 @@ def contexto():
 
     metodos = {r['metodo']: int(r['escolhido']) for r in comum.ler_csv('backtest_metodos.csv')}
     escolhido = next(m for m, e in metodos.items() if e == 1)
-    m = (TMDL_TABELAS / 'backtest_metodos.tmdl').read_text(encoding='utf-8')
-    nomes_metodo = dict(re.findall(r'\[metodo\] = "(\w+)" then "([^"]+)"', m))
+    nomes_metodo = tmdl.ler().nomes_dos_metodos()
 
-    cobertura = comum.ler_csv('backtest_cobertura.csv')
-    nivel = min(int(r['nivel']) for r in cobertura)        # o intervalo de 80%, o menor dos dois
-    soma, peso = defaultdict(float), defaultdict(float)
-    for r in cobertura:
-        if int(r['nivel']) == nivel:
-            soma[int(r['origem_fora'])] += float(r['cobertura_com_ajuste']) * int(r['n_teste'])
-            peso[int(r['origem_fora'])] += int(r['n_teste'])
-    pior_origem = min(soma, key=lambda o: soma[o] / peso[o])  # a mesma conta de scripts/numeros.py
+    niveis = sorted({int(r['nivel']) for r in comum.ler_csv('backtest_cobertura.csv')})
+    nivel = niveis[0]                                  # o Intervalo de previsão mais estreito
+    por_origem = comum.cobertura_por_origem(nivel)     # a mesma conta de scripts/numeros.py
+    pior_origem = min(por_origem, key=por_origem.get)
 
     return {
         'exemplo': municipios[cod],
         'indicador_padrao': indicadores['saude_pc'],
-        'resumo': [indicadores[i] for i in ('receita_pc', 'saude_pc', 'educacao_pc', 'dependencia_transf')],
-        'ids_resumo': ['receita_pc', 'saude_pc', 'educacao_pc', 'dependencia_transf'],
+        'resumo': {i: indicadores[i] for i in comum.INDICADORES_RESUMO},
         'ultimo_ano': max(max(a) for a in anos.values()),
         'ano_padrao': max(anos['saude_pc']),
         'ano_base': min(previstos) - 1,      # último ano observado; os reais são a preços dele
@@ -280,8 +286,13 @@ def contexto():
         'metodo_escolhido': nomes_metodo[escolhido],
         'outros_metodos': [nomes_metodo[x] for x in metodos if x != escolhido],
         'nivel': nivel,
+        'niveis': niveis,
         'pior_origem': pior_origem,
     }
+
+
+# Uma página: o nome da pasta, o título que o leitor vê, os visuais e as interações desligadas entre eles.
+Pagina = namedtuple('Pagina', 'nome titulo visuais interacoes')
 
 
 # ── as páginas ──────────────────────────────────────────────────────────
@@ -296,7 +307,7 @@ EIXO_DE_ANOS = {'properties': {'axisType': lit('Categorical'), 'showAxisTitle': 
 
 
 def so_anos_observados(nome, c):
-    return filtro(nome, ANO, condicao_comparacao(ANO, 4, c['ultimo_ano']))
+    return filtro(nome, ANO, condicao_comparacao(ANO, Comparacao.MENOR_OU_IGUAL, c['ultimo_ano']))
 
 
 def segmentacao_de_indicador(nome, caixa, ordem, c):
@@ -344,7 +355,7 @@ def pagina_municipio(c):
     ]
     # Quatro cartões de resumo, cada um preso a um Indicador pelo próprio filtro; a segmentação de
     # Indicador não os filtra (ver visualInteractions na página).
-    for i, (ident, nome) in enumerate(zip(c['ids_resumo'], c['resumo'])):
+    for i, (ident, nome) in enumerate(c['resumo'].items()):
         visuais.append(Visual(
             f'p1_resumo_{ident}', (24 + i * 312, 152, 296, 116), 'multiRowCard',
             f'Cartão de resumo: o último valor de {nome} no município, com a mediana da faixa no mesmo ano e o ano.',
@@ -369,15 +380,15 @@ def pagina_municipio(c):
                        ['As linhas cinza-claras são o 1º e o 3º quartil dos Municípios parecidos. '
                         'Estar acima ou abaixo da mediana não é, por si, bom nem ruim.'], ordem=12, tamanho=9),
     ]
-    interacoes = [{'source': 'p1_indicador', 'target': f'p1_resumo_{i}', 'type': 'NoFilter'} for i in c['ids_resumo']]
-    return 'municipio', 'Município', visuais, interacoes
+    interacoes = [{'source': 'p1_indicador', 'target': f'p1_resumo_{i}', 'type': 'NoFilter'} for i in c['resumo']]
+    return Pagina('municipio', 'Município', visuais, interacoes)
 
 
 def pagina_comparacao(c):
     eh_escolhido = medida('É o escolhido')
     # Regra de cor (fx → Regras): o escolhido no vermelho de destaque, os outros no cinza neutro.
     ponto = {'Conditional': {'Cases': [
-        {'Condition': {'Comparison': {'ComparisonKind': 0, 'Left': eh_escolhido, 'Right': literal(float(caso))}},
+        {'Condition': comparacao(Comparacao.IGUAL, eh_escolhido, float(caso)),
          'Value': literal(cor.upper())} for caso, cor in ((1, ep.DESTAQUE), (0, ep.NEUTRO))]}}
     visuais = [
         titulo_da_pagina('p2_titulo', 'Comparação na faixa'),
@@ -397,7 +408,7 @@ def pagina_comparacao(c):
                        'X': [projecao(medida('Valor'), 'Valor')],
                        'Y': [projecao(medida('População (Censo 2022)'), 'População (Censo 2022)')]},
                filtros=[filtro('na_faixa', medida('Na faixa do escolhido'),
-                               condicao_comparacao(medida('Na faixa do escolhido'), 0, 1))],
+                               condicao_comparacao(medida('Na faixa do escolhido'), Comparacao.IGUAL, 1))],
                objetos={'dataPoint': [{'properties': {'fill': {'solid': {'color': {'expr': ponto}}}},
                                        'selector': {'data': [{'dataViewWildcard': {'matchingOption': 1}}]}}],
                         'valueAxis': [{'properties': {'axisScale': lit('log'), 'showAxisTitle': lit(True)}}],
@@ -419,7 +430,7 @@ def pagina_comparacao(c):
                         'A página mostra posição e grupo, e não uma lista do maior ao menor: nenhum lado do eixo é, '
                         'por si, melhor.'], ordem=9, tamanho=9),
     ]
-    return 'comparacao', 'Comparação na faixa', visuais, []
+    return Pagina('comparacao', 'Comparação na faixa', visuais, [])
 
 
 def pagina_previsao(c):
@@ -470,7 +481,7 @@ def pagina_previsao(c):
         caixa_de_texto('p3_aviso', (24, 632, 1232, 80), 'Aviso sobre o que a previsão não considera.', [aviso],
                        ordem=5, tamanho=10, fundo=gerar_tema.zebra()),
     ]
-    return 'previsao', 'Previsão da receita', visuais, []
+    return Pagina('previsao', 'Previsão da receita', visuais, [])
 
 
 def pagina_como_ler(c):
@@ -536,7 +547,7 @@ def pagina_como_ler(c):
         caixa_de_texto('p4_fontes', (856, 440, 400, 272), 'Fontes, licenças e cuidados de leitura.', fontes,
                        ordem=4, tamanho=10),
     ]
-    return 'como_ler', 'Como ler, fontes e limites', visuais, []
+    return Pagina('como_ler', 'Como ler, fontes e limites', visuais, [])
 
 
 # ── gravação ────────────────────────────────────────────────────────────
@@ -576,18 +587,18 @@ def gerar(saida, c):
     gravar(definicao / 'report.json', relatorio())
 
     paginas = [f(c) for f in (pagina_municipio, pagina_comparacao, pagina_previsao, pagina_como_ler)]
-    for nome, titulo, visuais, interacoes in paginas:
-        pasta = definicao / 'pages' / nome
-        pagina = {'$schema': f'{ESQUEMAS}definition/page/{V_PAGINA}/schema.json', 'name': nome,
-                  'displayName': titulo, 'displayOption': 'FitToPage', 'height': ALTURA, 'width': LARGURA}
-        if interacoes:
-            pagina['visualInteractions'] = interacoes
+    for p in paginas:
+        pasta = definicao / 'pages' / p.nome
+        pagina = {'$schema': f'{ESQUEMAS}definition/page/{V_PAGINA}/schema.json', 'name': p.nome,
+                  'displayName': p.titulo, 'displayOption': 'FitToPage', 'height': ALTURA, 'width': LARGURA}
+        if p.interacoes:
+            pagina['visualInteractions'] = p.interacoes
         gravar(pasta / 'page.json', pagina)
-        for z, v in enumerate(visuais):
+        for z, v in enumerate(p.visuais):
             gravar(pasta / 'visuals' / v.nome / 'visual.json', v.json(1000 * (z + 1)))
     gravar(definicao / 'pages' / 'pages.json', {
         '$schema': f'{ESQUEMAS}definition/pagesMetadata/{V_PAGINAS}/schema.json',
-        'pageOrder': [p[0] for p in paginas], 'activePageName': paginas[0][0]})
+        'pageOrder': [p.nome for p in paginas], 'activePageName': paginas[0].nome})
     return paginas
 
 
@@ -596,8 +607,8 @@ def main():
     ap.add_argument('--saida', default=str(SAIDA_PADRAO), help='pasta .Report do PBIP (padrão: a do projeto)')
     args = ap.parse_args()
     paginas = gerar(args.saida, contexto())
-    for _, titulo, visuais, _ in paginas:
-        print(f'{titulo}: {len(visuais)} visuais')
+    for p in paginas:
+        print(f'{p.titulo}: {len(p.visuais)} visuais')
     print('gravado', args.saida)
 
 
