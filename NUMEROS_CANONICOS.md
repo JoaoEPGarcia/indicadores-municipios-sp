@@ -23,9 +23,9 @@ Cada número impresso no README, no relatório e nos títulos das figuras tem um
 | `\NumMedidas` | 39 | medidas DAX no modelo | `scripts/numeros.py` | (ainda não usado) |
 | `\NumCelulasConferencia` | 174 | células de powerbi/conferencia.md (valor esperado de uma medida) | `scripts/conferir_powerbi.py` | (ainda não usado) |
 | `\NumMunicipiosConferencia` | 3 | municípios sorteados para a conferência | `scripts/gerar_conferencia.py` | (ainda não usado) |
-| `\NumCelulasBatem` | PENDENTE | células em que a medida DAX devolveu o valor esperado | `scripts/conferir_powerbi.py` | (ainda não usado) |
-| `\NumCelulasCompletas` | PENDENTE | células da conferência completa | `scripts/conferir_powerbi.py` | (ainda não usado) |
-| `\NumDivergenciasCompletas` | PENDENTE | divergências entre DAX e SQLite na conferência completa | `scripts/conferir_powerbi.py` | (ainda não usado) |
+| `\NumCelulasBatem` | 174 | células em que a medida DAX devolveu o valor esperado | `scripts/conferir_powerbi.py` | (ainda não usado) |
+| `\NumCelulasCompletas` | 151.239 | células da conferência completa (3 medidas × município × ano × Indicador) | `scripts/conferir_powerbi.py` | (ainda não usado) |
+| `\NumDivergenciasCompletas` | 0 | divergências entre DAX e SQLite na conferência completa | `scripts/conferir_powerbi.py` | (ainda não usado) |
 | `\NumExemplo` | Ibirá | município de exemplo, sorteado com semente fixa | `scripts/comum.py` | `graficos/01-painel-municipio.png`, `graficos/02-municipio-na-faixa.png`, `graficos/03-previsao.png` |
 | `\NumExemploCandidatos` | 521 | municípios com série completa entre os quais o exemplo foi sorteado | `scripts/comum.py` | (ainda não usado) |
 | `\NumExemploFaixa` | de 10 a 20 mil | Faixa de porte do exemplo | `scripts/numeros.py` | `graficos/01-painel-municipio.png`, `graficos/02-municipio-na-faixa.png` |
