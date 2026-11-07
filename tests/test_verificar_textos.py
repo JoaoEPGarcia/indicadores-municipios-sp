@@ -384,6 +384,17 @@ class TesteCompilacao(unittest.TestCase):
         self.assertIn('[OK] relatorio/relatorio.tex compila', saida)
         self.assertTrue((self.repo.raiz / 'relatorio' / 'relatorio.pdf').exists())
 
+    def test_rodar_de_novo_sem_mudar_o_texto_deixa_o_mesmo_pdf_byte_a_byte(self):
+        # O PDF é versionado: conferir os textos de novo, sem mudança, não pode deixá-lo modificado no git.
+        self.repo.escrever('relatorio/relatorio.tex', RELATORIO_MINIMO)
+        pdf = self.repo.raiz / 'relatorio' / 'relatorio.pdf'
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 0, saida)
+        primeiro = pdf.read_bytes()
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 0, saida)
+        self.assertEqual(pdf.read_bytes(), primeiro)
+
     def test_relatorio_com_erro_de_latex_falha(self):
         self.repo.escrever('relatorio/relatorio.tex', r'''
             \documentclass{article}

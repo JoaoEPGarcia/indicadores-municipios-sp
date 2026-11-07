@@ -17,13 +17,16 @@ Falha quando:
   - o README montado ou o PDF mostram PENDENTE ou um marcador que sobrou;
   - relatorio/relatorio.tex não compila em pdfLaTeX, nas duas passadas, sem erro e sem referência ou
     citação quebrada. O PDF e os .aux antigos se apagam antes; compilado, o PDF vai para
-    relatorio/relatorio.pdf.
+    relatorio/relatorio.pdf. O PDF é reprodutível: a data gravada nele é a da capa (do registro) e o
+    identificador é fixo, então rodar de novo sem mudar o texto deixa o mesmo arquivo, byte a byte.
 
 Quando o modelo do README, o relatório ou o PDF ainda não existem, a verificação correspondente é
 pulada e o comando diz isso. Os testes ficam em tests/ (python -m unittest discover -s tests).
 """
 import argparse
+import datetime
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -32,7 +35,7 @@ import tempfile
 from pathlib import Path
 
 # O registro de números e os marcadores são os mesmos de scripts/numeros.py, que monta o README.
-from comum import DEFINICAO, MACRO, MARCADOR, MODELO_README, NOME_NUMERO, NUMEROS_USADOS, PENDENTE, REGISTRO_TEX
+from comum import DEFINICAO, MACRO, MARCADOR, MESES, MODELO_README, NOME_NUMERO, NUMEROS_USADOS, PENDENTE, REGISTRO_TEX
 
 RAIZ = Path(__file__).resolve().parent.parent
 
@@ -373,6 +376,17 @@ def conferir_compilacao(v, raiz, limite, textos):
                 problemas_da_compilacao(raiz, limite, textos))
 
 
+def momento_da_capa(raiz):
+    """Segundos desde 1970 (SOURCE_DATE_EPOCH do pdfTeX) do primeiro dia do mês da capa do relatório,
+    lido do registro (NumMesCapa e NumAnoCapa). Sem o registro, o começo de 1970: o PDF fica reprodutível igual."""
+    registro = ler_registro(raiz) or {}
+    mes, ano = registro.get('NumMesCapa'), registro.get('NumAnoCapa', '')
+    if mes not in MESES or not ano.isdigit():
+        return 0
+    dia = datetime.datetime(int(ano), MESES.index(mes) + 1, 1, tzinfo=datetime.timezone.utc)
+    return int(dia.timestamp())
+
+
 def problemas_da_compilacao(raiz, limite, textos):
     """Compila relatorio/relatorio.tex em duas passadas, como o kit manda, e devolve os problemas. Os
     arquivos auxiliares ficam numa pasta temporária; sem problema, o PDF vai para relatorio/relatorio.pdf.
@@ -383,12 +397,17 @@ def problemas_da_compilacao(raiz, limite, textos):
     for antigo in [raiz / RELATORIO_PDF, *pasta.rglob('*.aux'),
                    *(pasta / f'relatorio.{ext}' for ext in ('log', 'out', 'toc', 'lof', 'lot', 'bbl', 'blg'))]:
         antigo.unlink(missing_ok=True)
+    # PDF reprodutível: a data de criação é a da capa (SOURCE_DATE_EPOCH), e o identificador do arquivo, que o
+    # pdfTeX tiraria do relógio e do caminho da pasta temporária, é fixo (\pdftrailerid).
+    ambiente = {**os.environ, 'SOURCE_DATE_EPOCH': str(momento_da_capa(raiz))}
+    nome = Path(RELATORIO_TEX).stem
     with tempfile.TemporaryDirectory() as saida:
         for passada in (1, 2):
             try:
                 r = subprocess.run(['pdflatex', '-interaction=nonstopmode', '-halt-on-error', '-file-line-error',
-                                    f'-output-directory={saida}', Path(RELATORIO_TEX).name],
-                                   cwd=pasta, capture_output=True, timeout=limite)
+                                    f'-output-directory={saida}', f'-jobname={nome}',
+                                    rf'\pdftrailerid{{{nome}}}\input{{{Path(RELATORIO_TEX).name}}}'],
+                                   cwd=pasta, capture_output=True, timeout=limite, env=ambiente)
             except FileNotFoundError:
                 return ['pdflatex não está no PATH: instale o MiKTeX (ou o TeX Live) e abra outro terminal']
             except subprocess.TimeoutExpired:
