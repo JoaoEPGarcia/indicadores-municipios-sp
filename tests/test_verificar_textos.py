@@ -375,6 +375,36 @@ class TesteCompilacao(unittest.TestCase):
         self.assertIn('autor', saida)
         self.assertNotIn('sec:base', saida)
 
+    def test_compilacao_que_falha_nao_confere_o_pdf_antigo(self):
+        self.repo.escrever('relatorio/relatorio.pdf', '%PDF-1.4 de um build antigo')
+        self.repo.escrever('relatorio/relatorio.tex', r'''
+            \documentclass{article}
+            \begin{document}
+            \comandoquenaoexiste
+            \end{document}
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertFalse((self.repo.raiz / 'relatorio' / 'relatorio.pdf').exists())
+        self.assertNotIn('[OK] relatorio/relatorio.pdf', saida)
+        self.assertNotIn('pymupdf', saida)
+
+    def test_aux_antigo_na_pasta_nao_esconde_referencia_quebrada(self):
+        # Um relatorio.aux de outra compilação, à mão, ainda traz o rótulo que o texto já não define.
+        self.repo.escrever('relatorio/relatorio.aux', r'''
+            \relax
+            \newlabel{sec:antiga}{{1}{1}}
+        ''')
+        self.repo.escrever('relatorio/relatorio.tex', r'''
+            \documentclass{article}
+            \begin{document}
+            Ver a Seção~\ref{sec:antiga}.
+            \end{document}
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('sec:antiga', saida)
+
     def test_compilacao_que_passa_do_limite_de_tempo_falha_sem_traceback(self):
         self.repo.escrever('relatorio/relatorio.tex', r'''
             \documentclass{article}

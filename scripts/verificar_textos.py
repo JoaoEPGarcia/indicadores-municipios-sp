@@ -356,6 +356,11 @@ def conferir_compilacao(v, raiz, limite, textos):
     numa pasta temporária; o PDF vai para relatorio/relatorio.pdf. limite: segundos por passada."""
     nome = f'{RELATORIO_TEX} compila em pdfLaTeX, duas passadas, sem erro'
     pasta = (raiz / RELATORIO_TEX).parent
+    # Saídas de uma compilação anterior: o PDF antigo seria conferido se esta falhar, e um .aux na pasta
+    # do relatório é lido no lugar do novo, escondendo referência quebrada.
+    for antigo in [raiz / RELATORIO_PDF, *pasta.rglob('*.aux'),
+                   *(pasta / f'relatorio.{ext}' for ext in ('log', 'out', 'toc', 'lof', 'lot', 'bbl', 'blg'))]:
+        antigo.unlink(missing_ok=True)
     with tempfile.TemporaryDirectory() as saida:
         for passada in (1, 2):
             try:
@@ -447,6 +452,8 @@ def verificar(raiz, limite_pdflatex=600):
         v.pulada('compilação do relatório', f'{RELATORIO_TEX} ainda não existe')
     if (raiz / RELATORIO_PDF).exists():
         conferir_pdf(v, raiz)
+    elif (raiz / RELATORIO_TEX).exists():
+        v.pulada('texto do PDF', f'a compilação falhou e não deixou {RELATORIO_PDF}')
     else:
         v.pulada('texto do PDF', f'{RELATORIO_PDF} ainda não existe')
     return v
