@@ -3,10 +3,10 @@
   "name": "p1_resumo_saude_pc",
   "position": {
     "x": 336,
-    "y": 156,
+    "y": 152,
     "z": 9000,
     "width": 296,
-    "height": 104,
+    "height": 116,
     "tabOrder": 8
   },
   "visual": {
@@ -82,7 +82,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "16D"
+                  "Value": "14D"
                 }
               }
             }

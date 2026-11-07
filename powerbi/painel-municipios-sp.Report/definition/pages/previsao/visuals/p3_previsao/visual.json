@@ -3,10 +3,10 @@
   "name": "p3_previsao",
   "position": {
     "x": 24,
-    "y": 136,
+    "y": 148,
     "z": 3000,
     "width": 840,
-    "height": 480,
+    "height": 468,
     "tabOrder": 2
   },
   "visual": {
@@ -547,6 +547,13 @@
               "expr": {
                 "Literal": {
                   "Value": "'R$ milhões, a preços de 2025. O eixo vertical não começa no zero.'"
+                }
+              }
+            },
+            "titleWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
                 }
               }
             }

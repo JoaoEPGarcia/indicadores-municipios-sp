@@ -52,6 +52,7 @@ Todas as relações são 1:N, de direção única. As chaves e os valores brutos
 - Tamanho da página: 16:9 (1280 × 720), ajustada à janela. Fundo branco (o tema aplica).
 - Título da página: caixa de texto, Lato Bold 20, cor de texto do tema. É o primeiro item da ordem de tabulação. As caixas de texto usam a mesma pilha de fontes do tema (`Lato, 'Segoe UI', sans-serif`): só "Lato" o Desktop não resolve e cai numa fonte serifada.
 - **Cor.** O Município selecionado sai na **cor 1 do tema** (vermelho de destaque), só em marca: linha, ponto, coluna. A mediana e o contexto saem na **cor 2** (cinza neutro). Os quartis saem na cor 2, 60% mais clara. Número grande de cartão sai na cor de texto, e não em vermelho. Nenhuma outra cor do tema aparece. No JSON do PBIR, a cor 1 é `ThemeDataColor` de id 2 e a cor 2, de id 3: os ids 0 e 1 são o fundo e a cor de texto do tema.
+- As segmentações em lista suspensa têm 72 px de altura, para o valor escolhido não cortar embaixo. Subtítulos de visual também quebram em linhas.
 - Cartões mostram o número inteiro, no formato da medida (unidade de exibição "nenhuma": 11.690, e não "12 Mil"), com quebra de linha. Títulos de visual quebram em linhas, em vez de cortar.
 - Nenhum visual usa cor de "bom" ou "ruim": nenhum Indicador tem um lado melhor que valha para todo município. Nenhuma tabela tem formatação condicional de cor.
 - Texto alternativo em todo visual (**Formato → Geral → Texto alternativo**), dizendo a pergunta que o visual responde.
@@ -65,13 +66,13 @@ Pergunta: **onde este município está, e onde estão os parecidos?**
 | Tab | Posição (x, y, l × a) | Visual | Campos | Formato |
 |---|---|---|---|---|
 | 0 | 24, 16, 900 × 40 | Caixa de texto | "Indicadores do município" | título |
-| 1 | 24, 64, 320 × 64 | Segmentação, lista suspensa | `dim_municipio[municipio]` | seleção única; pesquisa ligada; o município de exemplo escolhido. Sincronizada com a página 3 |
+| 1 | 24, 64, 320 × 72 | Segmentação, lista suspensa | `dim_municipio[municipio]` | seleção única; pesquisa ligada; o município de exemplo escolhido. Sincronizada com a página 3 |
 | 2 | 800, 272, 456 × 156 | Segmentação, lista | `dim_indicador[nome]` | seleção única; filtro do visual tira a Receita corrente total (`indicador_id` ≠ `receita_total`), que é da página 3. Sincronizada com a página 2 |
 | 3 | 24, 272, 760 × 412 | Gráfico de linhas | Eixo X: `dim_ano[ano]` (categórico). Eixo Y: `[Valor]`, `[Mediana da faixa]`, `[1º quartil da faixa]`, `[3º quartil da faixa]` | `[Valor]`: cor 1, 2,5 pt, com marcador. Mediana: cor 2, 2 pt. Quartis: cor 2 clara, 1 pt. Título do visual: **fx → `[Título da evolução]`**, com quebra de linha. Legenda no topo (o rótulo na ponta da linha do município batia no do 3º quartil). Filtro do visual: ano até o último observado |
 | 4 | 360, 64, 300 × 80 | Cartão | `[Faixa de porte]` | rótulo "Faixa de porte"; número em 20 pt |
 | 5 | 676, 64, 200 × 80 | Cartão | `[Municípios na faixa]` | rótulo "Municípios na faixa"; 20 pt |
 | 6 | 892, 64, 220 × 80 | Cartão | `[População (Censo 2022)]` | rótulo "População (Censo 2022)"; 20 pt, número inteiro com ponto de milhar |
-| 7 a 10 | 24 + 312·i, 156, 296 × 104 | 4 cartões de várias linhas | `[Último valor]` (rótulo "município"), `[Último valor da faixa]` ("mediana da faixa") e `[Ano do último valor]` ("ano"), cada cartão preso por filtro do visual a um Indicador: Receita corrente por habitante, Despesa com saúde por habitante, Despesa com educação por habitante, Dependência de transferências | título do visual: o nome do Indicador. A segmentação de Indicador **não** filtra estes cartões (interação desligada na página) |
+| 7 a 10 | 24 + 312·i, 152, 296 × 116 | 4 cartões de várias linhas | `[Último valor]` (rótulo "município"), `[Último valor da faixa]` ("mediana da faixa") e `[Ano do último valor]` ("ano"), cada cartão preso por filtro do visual a um Indicador: Receita corrente por habitante, Despesa com saúde por habitante, Despesa com educação por habitante, Dependência de transferências | título do visual: o nome do Indicador; números em 14 pt. A segmentação de Indicador **não** filtra estes cartões (interação desligada na página) |
 | 11 | 800, 440, 456 × 244 | Tabela | `dim_ano[ano]`, `[Valor]`, `[Mediana da faixa]`, `[Diferença para a mediana]`, `[Posição na faixa]` | ordenada por ano; valor e mediana com a mesma casa decimal (o formato das duas medidas); sem linha de total; linhas em zebra (o tema faz); sem formatação condicional de cor. Filtro do visual: ano até o último observado |
 | 12 | 24, 688, 1232 × 28 | Caixa de texto | "As linhas cinza-claras são o 1º e o 3º quartil dos Municípios parecidos. Estar acima ou abaixo da mediana não é, por si, bom nem ruim." | 9 pt |
 
@@ -86,15 +87,15 @@ Esta página usa a tabela solta `sel_municipio`, e não `dim_municipio`, na segm
 | Tab | Posição (x, y, l × a) | Visual | Campos | Formato |
 |---|---|---|---|---|
 | 0 | 24, 16, 900 × 40 | Caixa de texto | "Comparação na faixa" | título |
-| 1 | 24, 64, 320 × 56 | Segmentação, lista suspensa | `sel_municipio[municipio]` | seleção única; o município de exemplo escolhido |
-| 2 | 24, 136, 320 × 260 | Segmentação, lista | `dim_indicador[nome]` | seleção única; **sincronizada com a página 1**; sem a Receita corrente total |
-| 3 | 24, 412, 320 × 56 | Segmentação, lista suspensa | `dim_ano[ano]` | seleção única; o último ano em que a Despesa com saúde por habitante tem dado (lido dos CSV) |
+| 1 | 24, 64, 320 × 72 | Segmentação, lista suspensa | `sel_municipio[municipio]` | seleção única; o município de exemplo escolhido |
+| 2 | 24, 148, 320 × 248 | Segmentação, lista | `dim_indicador[nome]` | seleção única; **sincronizada com a página 1**; sem a Receita corrente total |
+| 3 | 24, 408, 320 × 72 | Segmentação, lista suspensa | `dim_ano[ano]` | seleção única; o último ano em que a Despesa com saúde por habitante tem dado (lido dos CSV) |
 | 4 | 360, 64, 600 × 636 | Gráfico de dispersão | Detalhes: `dim_municipio[municipio]`. Eixo X: `[Valor]`. Eixo Y: `[População (Censo 2022)]`, em **escala logarítmica** | Filtro do visual: `[Na faixa do escolhido]` **é 1**. Cor dos pontos: **fx → Regras → `[É o escolhido]`**: 1 na cor 1, 0 no cinza neutro. Legenda e rótulos dos pontos desligados |
 | 5 | 980, 64, 276 × 140 | Cartão | `[Posição do escolhido]` | rótulo "Posição na faixa (0 a 100%)"; a nota diz que 0% é o menor valor da faixa e 100%, o maior |
 | 6 | 980, 216, 276 × 140 | Cartão | `[Valor do escolhido]` | rótulo "Valor do município" |
 | 7 | 980, 368, 276 × 140 | Cartão | `[Mediana da faixa do escolhido]` | rótulo "Mediana da faixa" |
 | 8 | 980, 520, 276 × 140 | Cartão | `[Diferença do escolhido]` | rótulo "Diferença para a mediana" |
-| 9 | 24, 484, 320 × 216 | Caixa de texto | o que é cada ponto, como ler a Posição na faixa, e que a página mostra posição e grupo, e não lista | 9 pt |
+| 9 | 24, 492, 320 × 208 | Caixa de texto | o que é cada ponto, como ler a Posição na faixa, e que a página mostra posição e grupo, e não lista | 9 pt |
 
 Sem ranking por nome: a página mostra posição e grupo, e não uma lista do "pior" ao "melhor". Todos os pontos têm o mesmo tamanho; o escolhido se distingue só pela cor.
 
@@ -105,8 +106,8 @@ Pergunta: **quanto de receita o município pode esperar nos próximos três anos
 | Tab | Posição (x, y, l × a) | Visual | Campos | Formato |
 |---|---|---|---|---|
 | 0 | 24, 16, 900 × 40 | Caixa de texto | "Previsão da receita" | título |
-| 1 | 24, 64, 320 × 56 | Segmentação, lista suspensa | `dim_municipio[municipio]` | seleção única; **sincronizada com a página 1** |
-| 2 | 24, 136, 840 × 480 | Gráfico de linhas | Eixo X: `dim_ano[ano]` (categórico). Eixo Y: `[Receita observada]`, `[Receita prevista (linha)]`, `[Limite inferior 80%]`, `[Limite superior 80%]`, `[Limite inferior 95%]`, `[Limite superior 95%]` | Observada: cor 1, sólida, 2,5 pt, com marcador. Prevista: cor 1, **tracejada**, 2 pt (as duas no vermelho, como na Figura 3). Intervalo de 80%: cor 1 50% mais clara, 1 pt. Intervalo de 95%: cor 2, 1 pt, pontilhada. Eixo Y sem forçar o zero; o subtítulo diz "R$ milhões, a preços de" o ano-base e que o eixo não começa no zero. Legenda desligada, rótulos de série ligados |
+| 1 | 24, 64, 320 × 72 | Segmentação, lista suspensa | `dim_municipio[municipio]` | seleção única; **sincronizada com a página 1** |
+| 2 | 24, 148, 840 × 468 | Gráfico de linhas | Eixo X: `dim_ano[ano]` (categórico). Eixo Y: `[Receita observada]`, `[Receita prevista (linha)]`, `[Limite inferior 80%]`, `[Limite superior 80%]`, `[Limite inferior 95%]`, `[Limite superior 95%]` | Observada: cor 1, sólida, 2,5 pt, com marcador. Prevista: cor 1, **tracejada**, 2 pt (as duas no vermelho, como na Figura 3). Intervalo de 80%: cor 1 50% mais clara, 1 pt. Intervalo de 95%: cor 2, 1 pt, pontilhada. Eixo Y sem forçar o zero; o subtítulo diz "R$ milhões, a preços de" o ano-base e que o eixo não começa no zero. Legenda desligada, rótulos de série ligados |
 | 3 | 880, 136, 376 × 120 | Cartão | `[Receita prevista no último ano]` | rótulo "R$ milhões em" o último ano previsto ", a preços de" o ano-base |
 | 4 | 880, 272, 376 × 344 | Cartão | `[Texto da previsão]` | 14 pt, quebra de linha, sem rótulo: a frase com o valor e os dois intervalos |
 | 5 | 24, 632, 1232 × 80 | Caixa de texto | o aviso abaixo | 10 pt, sobre fundo zebra |
@@ -121,7 +122,7 @@ Aviso: "Previsão simples, sem informação de fora da série: repete a tendênc
 |---|---|---|---|---|
 | 0 | 24, 16, 900 × 40 | Caixa de texto | "Como ler, fontes e limites" | título |
 | 1 | 24, 64, 1232 × 360 | Tabela | `dim_indicador[nome]`, `[unidade]`, `[formula]`, `[fonte]`, `[periodicidade]`, `[meta]` | largura fixa por coluna (190, 160, 330, 290, 100 e 130), somando menos que a tabela: sem rolagem lateral; quebra de linha no cabeçalho e nos valores |
-| 2 | 24, 440, 400 × 272 | Gráfico de linhas | Eixo X: `backtest_metodos[horizonte]` (categórico). Eixo Y: `[Erro médio absoluto]`. Legenda: `backtest_metodos[metodo_nome]` | o método escolhido (a tendência dos 3 últimos anos) na cor 1, os outros dois na cor 2; título com o nome do método escolhido, lido do TMDL |
+| 2 | 24, 440, 400 × 272 | Gráfico de linhas | Eixo X: `backtest_metodos[horizonte]` (categórico). Eixo Y: `[Erro médio absoluto]`. Legenda: `backtest_metodos[metodo_nome]` | o método escolhido (a tendência dos 3 últimos anos) na cor 1, os outros dois na cor 2; título com o nome do método escolhido, lido do TMDL. Sem legenda (os nomes dos métodos não cabiam): o subtítulo diz que o vermelho é o método usado e nomeia os dois em cinza |
 | 3 | 440, 440, 400 × 272 | Gráfico de colunas | Eixo X: `backtest_cobertura[origem_fora]` (categórico). Eixo Y: `[Cobertura com ajuste]`, começando no zero | Filtro do visual: `backtest_cobertura[nivel]` = 80 (o menor nível dos CSV). Linha constante tracejada em 80%. A origem com menor cobertura na cor 1, as outras na cor 2 (a mesma conta de `scripts/numeros.py`) |
 | 4 | 856, 440, 400 × 272 | Caixa de texto | fontes e licenças (resumo da seção "Fontes" do README) e os cuidados: degrau do Censo 2022 nas séries por habitante; Ideb bienal; município sem rede municipal fica sem Ideb; Municípios parecidos é só porte | 10 pt |
 

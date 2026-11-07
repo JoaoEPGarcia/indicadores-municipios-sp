@@ -293,6 +293,13 @@
                   "Value": "'Depois do alargamento. A linha marca 80%; em vermelho, o ano de menor cobertura.'"
                 }
               }
+            },
+            "titleWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
             }
           }
         }

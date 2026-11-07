@@ -226,14 +226,7 @@
             "show": {
               "expr": {
                 "Literal": {
-                  "Value": "true"
-                }
-              }
-            },
-            "position": {
-              "expr": {
-                "Literal": {
-                  "Value": "'Top'"
+                  "Value": "false"
                 }
               }
             }
@@ -334,7 +327,14 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Erro médio absoluto ao prever o passado, por anos à frente'"
+                  "Value": "'Erro médio absoluto ao prever o passado, por anos à frente. Em vermelho, o método usado; em cinza, os outros dois: Repetir o último valor e Reta dos 5 últimos anos.'"
+                }
+              }
+            },
+            "titleWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
                 }
               }
             }

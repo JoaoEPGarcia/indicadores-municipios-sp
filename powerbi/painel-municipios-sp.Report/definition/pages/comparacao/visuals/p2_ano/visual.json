@@ -3,10 +3,10 @@
   "name": "p2_ano",
   "position": {
     "x": 24,
-    "y": 412,
+    "y": 408,
     "z": 4000,
     "width": 320,
-    "height": 56,
+    "height": 72,
     "tabOrder": 3
   },
   "visual": {
