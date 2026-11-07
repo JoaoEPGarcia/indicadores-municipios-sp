@@ -1,6 +1,6 @@
 # Passo a passo: refazer a planilha à mão
 
-Este guia refaz, no Excel para a web e sem script, a planilha `painel-municipios-sp.xlsx`: tabelas nomeadas com os dados, PROCX para o painel, tabela dinâmica para explorar. A versão de referência é gerada por `scripts/montar_excel.py` (Python) e completada no Excel para a web, onde se insere a tabela dinâmica e onde as fórmulas são calculadas (ver `docs/adr/0004-planilha-sem-power-query.md`). O `scripts/conferir_excel.py` confere o resultado. Use o mesmo conferidor na sua versão (passo 9).
+Este guia refaz, no Excel para a web e sem script, a planilha `painel-municipios-sp.xlsx`: tabelas nomeadas com os dados, PROCX para o painel, tabela dinâmica para explorar. A versão de referência é gerada por `scripts/montar_excel.py` (Python), que grava `excel/painel-municipios-sp.xlsx` sem a tabela dinâmica, e completada no Excel para a web, onde a tabela dinâmica e a segmentação foram inseridas pelo agente de IA (Claude, operando o navegador) e onde as fórmulas são calculadas (ver `docs/adr/0004-planilha-sem-power-query.md`). A versão final, com a tabela dinâmica e os valores calculados, é `excel/calculadas/ibira.xlsx`. O `scripts/conferir_excel.py` confere o resultado. Use o mesmo conferidor na sua versão (passo 9).
 
 **Precisa de:** Excel para a web (Microsoft 365) ou Excel 365/2021 no computador (PROCX, LET e SEQUÊNCIA não existem antes disso) e a pasta `dados\tratados\` do repositório.
 
@@ -145,7 +145,7 @@ O gráfico:
 
 ## 5. A aba Explorar (tabela dinâmica)
 
-Na versão de referência, este é o passo feito à mão no Excel para a web, sobre a planilha que o script gera.
+Na versão de referência, este passo não sai do script: foi feito no Excel para a web pelo agente de IA (Claude, operando o navegador), seguindo estes mesmos itens, sobre a planilha que o script gera. Quem refaz a planilha à mão faz o mesmo.
 
 1. Crie a aba `Explorar` (na de referência ela já existe, com as instruções nas linhas 1 a 6). Clique em **D8** → **Inserir → Tabela Dinâmica** → tabela `tFato` → **Planilha existente**, `Explorar!$D$8`. **OK.**
 2. No painel **Campos da Tabela Dinâmica**, arraste: `ano` para **Linhas**, `indicador` para **Colunas**, `valor` para **Valores**.
@@ -176,13 +176,13 @@ A frase, em B23 (mesclada até H23, com quebra de texto):
 =LET(a; $D$5; m; Painel!$C$4; linha; CORRESP(a; $B$8:$B$21; 0);
      p; ÍNDICE($D$8:$D$21; linha); inf_80; ÍNDICE($E$8:$E$21; linha); sup_80; ÍNDICE($F$8:$F$21; linha);
      inf_95; ÍNDICE($G$8:$G$21; linha); sup_95; ÍNDICE($H$8:$H$21; linha);
-     SEERRO("Em "&a&", a receita corrente de "&m&" fica perto de R$ "&DEF.NÚM.DEC(p; 1)&" milhões (a preços de "&$D$4&"). No intervalo de 80% do teste contra o passado, entre R$ "&DEF.NÚM.DEC(inf_80; 1)&" e R$ "&DEF.NÚM.DEC(sup_80; 1)&" milhões; no de 95%, entre R$ "&DEF.NÚM.DEC(inf_95; 1)&" e R$ "&DEF.NÚM.DEC(sup_95; 1)&" milhões.";
+     SEERRO("Em "&a&", a receita corrente de "&m&" fica perto de R$ "&DEF.NÚM.DEC(p; 1)&" milhões (a preços de "&$D$4&"). No Intervalo de previsão de 80% do Teste contra o passado, entre R$ "&DEF.NÚM.DEC(inf_80; 1)&" e R$ "&DEF.NÚM.DEC(sup_80; 1)&" milhões; no de 95%, entre R$ "&DEF.NÚM.DEC(inf_95; 1)&" e R$ "&DEF.NÚM.DEC(sup_95; 1)&" milhões.";
             "Este município não tem os anos recentes de receita válidos: sem previsão."))
 ```
 
 Use `DEF.NÚM.DEC`, e não `TEXTO(p; "#.##0,0")`: o código de formato do TEXTO é escrito no idioma de quem digita e quebra quando a planilha abre num Excel em inglês. O DEF.NÚM.DEC segue o idioma de quem abre.
 
-Em B24, o aviso, sobre fundo cinza-claro: "Previsão simples, sem informação de fora da série: repete a tendência recente da receita do município. Não leva em conta mudança de lei, de alíquota, de convênio nem de gestão. O intervalo mostra o quanto o método errou ao prever o passado de municípios do mesmo porte. Projeto de portfólio feito com dado público."
+Em B24, o aviso, sobre fundo cinza-claro: "Previsão simples, sem informação de fora da série: repete a tendência recente da receita do município. Não leva em conta mudança de lei, de alíquota, de convênio nem de gestão. O Intervalo de previsão mostra o quanto o método errou ao prever o passado de municípios do mesmo porte, alargado até a cobertura do Teste contra o passado chegar ao nível prometido. Projeto de portfólio feito com dado público." Na versão de referência, o aviso diz ainda em que ano deixado de fora o intervalo de 80% cobriu menos, e quanto.
 
 O gráfico: selecione B7:H21 → **Inserir → Linha**, e ponha-o a partir de J7. Observada em vermelho 2,5 pt com marcador; prevista em vermelho tracejado 2 pt; limites de 80% em vermelho 1 pt; limites de 95% em cinza 1 pt pontilhado. Título ligado a `=Previsão!$B$2` (ou escrito à mão, como no passo 4.3).
 

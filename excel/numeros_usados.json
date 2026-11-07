@@ -1,10 +1,13 @@
 {
   "painel-municipios-sp.xlsx": [
-    "NumExemplo",
     "NumMunicipios",
     "NumIndicadores",
     "NumAnoInicial",
     "NumAnoFinal",
+    "NumExemplo",
+    "NumAnoBase",
+    "NumNivelMenor",
+    "NumNivelMaior",
     "NumCobOitentaPiorOrigem",
     "NumCobOitentaPior"
   ]

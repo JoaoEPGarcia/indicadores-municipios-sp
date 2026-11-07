@@ -256,8 +256,9 @@ def aba_previsao(a, v, ano0, ano_fim):
     a.mesclar('B5:C5', 'Último ano previsto')
     a.formula(L.ULTIMO_PREVISTO, '=MAX(tPrevisao[ano])', '0')
 
-    cab = ['Ano', 'Receita observada', 'Receita prevista', 'Limite inferior 80%', 'Limite superior 80%',
-           'Limite inferior 95%', 'Limite superior 95%']
+    menor, maior = v['NumNivelMenor'], v['NumNivelMaior']      # os níveis do Intervalo de previsão
+    limites = [f'Limite {lado} {nivel}%' for nivel in (menor, maior) for lado in ('inferior', 'superior')]
+    cab = ['Ano', 'Receita observada', 'Receita prevista', *limites]
     for k, h in enumerate(cab):
         a.texto(xl_rowcol_to_cell(L.LINHA_PREVISAO - 2, 1 + k), h, negrito=True, quebra=True, bottom=1, bottom_color=TINTA2)
     ws.set_row(L.LINHA_PREVISAO - 2, 30)
@@ -289,16 +290,17 @@ def aba_previsao(a, v, ano0, ano_fim):
         f' p, INDEX({coluna("previsto")}, linha), inf_80, INDEX({coluna("inferior_80")}, linha), sup_80, INDEX({coluna("superior_80")}, linha),'
         f' inf_95, INDEX({coluna("inferior_95")}, linha), sup_95, INDEX({coluna("superior_95")}, linha),'
         f' IFERROR("Em "&a&", a receita corrente de "&m&" fica perto de R$ "&FIXED(p, 1)&" milhões (a preços de "&{obs}&"). '
-        f'No intervalo de 80% do teste contra o passado, entre R$ "&FIXED(inf_80, 1)&" e R$ "&FIXED(sup_80, 1)&" milhões; no de 95%, '
+        f'No Intervalo de previsão de {menor}% do Teste contra o passado, entre R$ "&FIXED(inf_80, 1)&" e R$ "&FIXED(sup_80, 1)&" '
+        f'milhões; no de {maior}%, '
         f'entre R$ "&FIXED(inf_95, 1)&" e R$ "&FIXED(sup_95, 1)&" milhões.",'
         f' "Este município não tem os anos recentes de receita válidos: sem previsão."))'),
         tam=12, text_wrap=True, valign='top', comum=True)
     ws.set_row(fr - 1, 48)
     aviso = ('Previsão simples, sem informação de fora da série: repete a tendência recente da receita do município. Não leva em '
-             'conta mudança de lei, de alíquota, de convênio nem de gestão. O intervalo mostra o quanto o método errou ao prever o '
-             f'passado de municípios do mesmo porte, alargado até a cobertura do teste chegar ao nível prometido. Com '
-             f'{v["NumCobOitentaPiorOrigem"]} deixado de fora, o intervalo de 80% cobriu só {v["NumCobOitentaPior"]}%: '
-             'use o de 95% como leitura prudente. Projeto de portfólio feito com dado público.')
+             'conta mudança de lei, de alíquota, de convênio nem de gestão. O Intervalo de previsão mostra o quanto o método errou ao '
+             'prever o passado de municípios do mesmo porte, alargado até a cobertura do Teste contra o passado chegar ao nível '
+             f'prometido. Com {v["NumCobOitentaPiorOrigem"]} deixado de fora, o Intervalo de previsão de {menor}% cobriu só '
+             f'{v["NumCobOitentaPior"]}%: use o de {maior}% como leitura prudente. Projeto de portfólio feito com dado público.')
     a.mesclar(f'B{fr + 1}:H{fr + 1}', aviso, font_size=9, font_color=TINTA2, text_wrap=True, valign='top', bg_color=ZEBRA)
     ws.set_row(fr, 64)
 
@@ -307,10 +309,10 @@ def aba_previsao(a, v, ano0, ano_fim):
 
     anos = col(1)
     g = grafico_linhas(a.wb, [L.PREVISAO, 1, 1], 11, negrito=False)      # título ligado a B2
-    serie(g, 'Limite inferior 95%', col(6), anos, NEUTRO, 1, traco='round_dot')
-    serie(g, 'Limite superior 95%', col(7), anos, NEUTRO, 1, traco='round_dot')
-    serie(g, 'Limite inferior 80%', col(4), anos, DESTAQUE, 1)
-    serie(g, 'Limite superior 80%', col(5), anos, DESTAQUE, 1)
+    serie(g, limites[2], col(6), anos, NEUTRO, 1, traco='round_dot')
+    serie(g, limites[3], col(7), anos, NEUTRO, 1, traco='round_dot')
+    serie(g, limites[0], col(4), anos, DESTAQUE, 1)
+    serie(g, limites[1], col(5), anos, DESTAQUE, 1)
     serie(g, 'Receita prevista', col(3), anos, DESTAQUE, 2, traco='dash')
     serie(g, 'Receita observada', col(2), anos, DESTAQUE, 2.5, marcador=True)
     g.set_size({'width': 853, 'height': 453})
@@ -346,18 +348,23 @@ def aba_leiame(a, v):
                     f'educação, saúde e economia, de {v["NumAnoInicial"]} a {v["NumAnoFinal"]}, e compara cada município com os de mesmo '
                     'porte. Tem ainda uma previsão simples da receita, com a incerteza à vista. Projeto de portfólio feito com dado público.'),
         ('Como usar', '1) Na aba "Painel", escolha o município na célula azul. 2) Leia os cartões e a tabela. 3) Escolha um indicador '
-                      'para o gráfico. 4) Na aba "Previsão", leia a projeção da receita. A aba "Explorar" é uma tabela dinâmica com '
-                      'segmentação de município.'),
+                      'para o gráfico. 4) Na aba "Previsão", leia a Previsão da receita, com os Intervalos de previsão. 5) Na aba '
+                      '"Explorar", use a tabela dinâmica com segmentação de município. Ela não sai do script: no arquivo gerado '
+                      f'({L.ORIGEM_ARQUIVO}) a aba só tem as instruções, e a versão com a tabela dinâmica e com os valores já '
+                      f'calculados é {L.copia_calculada(v["NumExemplo"])}.'),
         ('De onde vêm os números', 'As abas "Indicadores", "Municípios", "Dados", "Referência" e "Previsões" são tabelas nomeadas com os '
                                    'CSV de dados/tratados/ do repositório, gravadas pelo script scripts/montar_excel.py (a tabela da aba '
                                    '"Dados" recebe o nome do Indicador ao lado do código). As abas "Painel" e "Previsão" só têm fórmulas '
-                                   '(PROCX, LET, SEQUÊNCIA, SOMARPRODUTO) sobre essas tabelas. A tabela dinâmica e a segmentação da aba '
-                                   '"Explorar" são inseridas à mão, no Excel para a web. Para dados novos, rode o script de novo.'),
+                                   '(PROCX, LET, SEQUÊNCIA, SOMARPRODUTO) sobre essas tabelas, que o Excel calcula ao abrir. A tabela '
+                                   'dinâmica e a segmentação da aba "Explorar" não são do script: foram inseridas no Excel para a web '
+                                   'pelo agente de IA Claude, que operou o navegador seguindo o passo a passo do repositório '
+                                   '(excel/PASSO_A_PASSO.md, passo 5); o mesmo passo a passo permite refazê-las à mão. Para dados novos, '
+                                   'rode o script de novo e refaça a tabela dinâmica.'),
         ('Como ler a comparação', 'A mediana é a dos municípios do mesmo porte (Censo 2022) no mesmo ano. A posição vai de 0% (menor valor '
                                   'da faixa) a 100% (maior). Estar acima ou abaixo não é bom nem ruim por si: depende de escolhas e do '
                                   'contexto do município.'),
-        ('Cuidados', 'Valores em reais de 2025 (IPCA). Os indicadores por habitante têm um degrau entre 2021 e 2022, porque a população '
-                     'passa a vir do Censo 2022. A receita total (R$ milhões) não tem esse degrau. O Ideb é bienal, e município sem rede '
+        ('Cuidados', f'Valores em reais de {v["NumAnoBase"]} (IPCA). Os indicadores por habitante têm um degrau no ano do Censo 2022, '
+                     'porque a população passa a vir dele. A receita total (R$ milhões) não tem esse degrau. O Ideb é bienal, e município sem rede '
                      'municipal fica sem Ideb. Município que não entregou a declaração ao Tesouro no ano fica "n.d.": nada foi estimado.'),
         ('Fontes', 'Tesouro Nacional (Siconfi), IBGE, INEP e DataSUS. Licenças: aba "Fontes e licenças".'),
     ]

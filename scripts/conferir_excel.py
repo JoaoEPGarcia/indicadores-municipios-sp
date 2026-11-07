@@ -35,7 +35,7 @@ sys.path.insert(0, str(RAIZ / 'scripts'))
 import comum  # noqa: E402
 import layout_planilha as L  # noqa: E402
 
-CALCULADAS = comum.EXCEL / 'calculadas'
+CALCULADAS = comum.RAIZ / L.CALCULADAS
 SAIDA = comum.EXCEL / 'resultado_conferencia_excel.json'
 SQLITE = comum.TRATADOS / 'amostra.sqlite'
 ERROS = {'#N/A', '#N/D'}   # como o arquivo guarda o NÃO.DISP() (o Excel grava em inglês)

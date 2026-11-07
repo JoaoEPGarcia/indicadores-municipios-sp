@@ -2,9 +2,13 @@
 scripts/conferir_excel.py lê e que scripts/numeros.py cita no relatório. Mudar uma posição aqui muda os três;
 o passo a passo escrito à mão (excel/PASSO_A_PASSO.md) cita as mesmas células e se atualiza à mão.
 """
+import unicodedata
+
 from xlsxwriter.utility import xl_cell_to_rowcol
 
-ARQUIVO = 'painel-municipios-sp.xlsx'        # em excel/
+ARQUIVO = 'painel-municipios-sp.xlsx'        # em excel/: a planilha gerada pelo script, sem tabela dinâmica
+ORIGEM_ARQUIVO = f'excel/{ARQUIVO}'
+CALCULADAS = 'excel/calculadas'             # as cópias calculadas no Excel para a web, uma por município
 # Marca da planilha de referência: o construtor grava ORIGEM no nome definido NOME_ORIGEM.
 ORIGEM = 'scripts/montar_excel.py'
 NOME_ORIGEM = 'OrigemDaPlanilha'
@@ -47,3 +51,10 @@ def fixa(celula, aba=None):
     """Referência absoluta, como as fórmulas a usam: fixa('C4') → '$C$4'; fixa('C5', 'Painel') → 'Painel!$C$5'."""
     letras = celula.rstrip('0123456789')
     return (f'{aba}!' if aba else '') + f'${letras}${celula[len(letras):]}'
+
+
+def copia_calculada(municipio):
+    """A cópia calculada de um município, como o repositório a guarda: 'Santa Lúcia' → 'excel/calculadas/santa-lucia.xlsx'.
+    A do município de exemplo é a versão final da planilha, com a tabela dinâmica e a segmentação."""
+    nome = unicodedata.normalize('NFKD', municipio).encode('ascii', 'ignore').decode().lower()
+    return f'{CALCULADAS}/' + '-'.join(nome.split()) + '.xlsx'

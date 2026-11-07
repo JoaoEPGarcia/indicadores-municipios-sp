@@ -17,9 +17,11 @@ import zipfile
 from pathlib import Path
 
 import openpyxl
+import pandas as pd
 
 REPO = Path(__file__).resolve().parent.parent
 SCRIPT = REPO / 'scripts' / 'montar_excel.py'
+TRATADOS = REPO / 'dados' / 'tratados'
 sys.path.insert(0, str(REPO / 'scripts'))
 import comum  # noqa: E402
 from apoio import Copia  # noqa: E402
@@ -156,6 +158,35 @@ class PlanilhaGerada(unittest.TestCase):
     def test_registro_dos_numeros_impressos_ao_lado_da_planilha(self):
         usados = json.loads((self.saida.parent / 'numeros_usados.json').read_text(encoding='utf-8'))
         self.assertIn('NumExemplo', usados[self.saida.name])
+        self.assertIn('NumAnoBase', usados[self.saida.name])       # os reais do Leia-me
+
+    def texto(self, aba):
+        return ' '.join(str(c.value) for linha in self.wb[aba].iter_rows() for c in linha if isinstance(c.value, str))
+
+    def test_leia_me_diz_o_ano_dos_precos_tirado_dos_dados(self):
+        ano_base = int(pd.read_csv(TRATADOS / 'previsao_receita_total.csv').ano.min()) - 1
+        self.assertIn(f'reais de {ano_base}', self.texto('Leia-me'))
+
+    def test_leia_me_usa_o_vocabulario_do_glossario(self):
+        leiame = self.texto('Leia-me')
+        self.assertNotIn('projeção', leiame)       # GLOSSARY.md: Previsão da receita (evitar "projeção")
+        self.assertIn('Previsão da receita', leiame)
+
+    def test_leia_me_diz_quem_pos_a_tabela_dinamica_e_onde_esta_a_versao_final(self):
+        # A planilha gerada não tem a tabela dinâmica: ela entra no Excel para a web, pelo agente de IA.
+        leiame = self.texto('Leia-me')
+        self.assertIn('Claude', leiame)
+        self.assertNotIn('à mão, no Excel para a web', leiame)
+        self.assertIn('excel/calculadas/ibira.xlsx', leiame)
+
+    def test_previsao_chama_o_intervalo_pelo_nome_do_glossario_e_com_os_niveis_dos_dados(self):
+        menor, maior = sorted(pd.read_csv(TRATADOS / 'backtest_cobertura.csv').nivel.unique())
+        ws = self.wb['Previsão']
+        cab = [ws.cell(7, c).value for c in range(2, 9)]
+        self.assertEqual(cab[3:], [f'Limite inferior {menor}%', f'Limite superior {menor}%',
+                                   f'Limite inferior {maior}%', f'Limite superior {maior}%'])
+        self.assertIn(f'No Intervalo de previsão de {menor}%', formula(ws['B23']))
+        self.assertIn(f'o Intervalo de previsão de {menor}% cobriu', self.texto('Previsão'))
 
 
 
