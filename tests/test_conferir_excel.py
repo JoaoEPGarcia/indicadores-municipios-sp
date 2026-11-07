@@ -7,6 +7,7 @@ devolveram com o SQLite. Aqui, cada planilha de teste é montada com openpyxl s�
 guarda depois de calcular. Os valores esperados saem dos CSV de dados/tratados/, por pandas, e não do SQLite
 nem do código do conferidor: é uma segunda conta, independente. O conferidor roda por fora, como o dono roda.
 """
+import datetime
 import json
 import subprocess
 import sys
@@ -107,6 +108,13 @@ class Conferidor(unittest.TestCase):
         self.assertEqual(sorted(r['lista']), sorted(CONFERENCIA + [EXEMPLO]))
         self.assertEqual(r['batem'], r['celulas'])
         self.assertIn(f"{r['celulas']} de {r['celulas']} células iguais ao SQLite", saida)
+
+    def test_resultado_grava_o_dia_da_conferencia(self):
+        # o relatório tira a data da capa daqui (scripts/numeros.py), e não do relógio de quem roda o registro
+        codigo, saida = self.conferir(*self.quatro())
+        self.assertEqual(codigo, 0, saida)
+        r = json.loads(self.resultado.read_text(encoding='utf-8'))
+        self.assertEqual(r['data'], datetime.date.today().isoformat())
 
     def test_celula_diferente_do_sqlite_falha_e_diz_onde(self):
         arq = planilha(self.pasta / 'p.xlsx', 'Morro Agudo', mexer=('Painel', 'E15', 123.4))

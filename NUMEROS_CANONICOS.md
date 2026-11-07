@@ -83,8 +83,8 @@ Cada número impresso no README, no relatório e nos títulos das figuras tem um
 | `\NumCelulasExcel` | 256 | células da aba Painel conferidas contra o SQLite | `scripts/conferir_excel.py` | `docs/README.modelo.md`, `relatorio/gerados/conferencias.tex`, `relatorio/relatorio.tex` |
 | `\NumCelulasExcelBatem` | 256 | células da aba Painel iguais ao SQLite | `scripts/conferir_excel.py` | `docs/README.modelo.md`, `relatorio/gerados/conferencias.tex`, `relatorio/relatorio.tex` |
 | `\NumMunicipiosExcel` | 4 | municípios testados na planilha | `scripts/conferir_excel.py` | `docs/README.modelo.md`, `relatorio/gerados/conferencias.tex`, `relatorio/relatorio.tex` |
-| `\NumMesCapa` | Novembro | mês da capa do relatório (o mês em que o registro foi gerado) | `scripts/numeros.py` | `relatorio/relatorio.tex` |
-| `\NumAnoCapa` | 2026 | ano da capa do relatório (o ano em que o registro foi gerado) | `scripts/numeros.py` | `relatorio/relatorio.tex` |
+| `\NumMesCapa` | Novembro | mês da capa do relatório (o da conferência da planilha gravada em excel/resultado_conferencia_excel.json) | `scripts/conferir_excel.py` | `relatorio/relatorio.tex` |
+| `\NumAnoCapa` | 2026 | ano da capa do relatório (o da conferência da planilha gravada em excel/resultado_conferencia_excel.json) | `scripts/conferir_excel.py` | `relatorio/relatorio.tex` |
 | `\NumRegraFator` | 4 | quantas vezes acima ou abaixo da média dos outros anos o valor sai | `sql/20_indicadores.sql` | `relatorio/relatorio.tex` |
 | `\NumLinhasRefFaixa` | 553 | linhas de ref_faixa (Faixa de porte × ano × Indicador) | `scripts/numeros.py` | `relatorio/gerados/tabelas_modelo.tex` |
 | `\NumLinhasPrevisao` | 1.926 | linhas de previsao (município × ano previsto) | `scripts/numeros.py` | `relatorio/gerados/tabelas_modelo.tex` |

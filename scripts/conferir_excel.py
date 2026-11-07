@@ -15,12 +15,13 @@ valores guardados: o script para e diz isso.
 Por padrão, a conferência cobre os três municípios de powerbi/conferencia.md e o município de exemplo, um por
 arquivo; o script diz quais deles faltam entre os arquivos dados. Só quando todos os arquivos são a planilha de
 referência (marcada pelo nome definido OrigemDaPlanilha, que o construtor grava) e os quatro municípios estão
-presentes, o resultado vai para excel/resultado_conferencia_excel.json, lido por scripts/numeros.py. Conferir
-outra planilha nunca muda esse arquivo.
+presentes, o resultado vai para excel/resultado_conferencia_excel.json, lido por scripts/numeros.py, com o dia
+da conferência (o relatório o usa como data da capa). Conferir outra planilha nunca muda esse arquivo.
 
 Sai com código 1 se alguma célula divergir e 2 se um arquivo não puder ser conferido.
 """
 import argparse
+import datetime
 import json
 import math
 import sqlite3
@@ -174,7 +175,8 @@ def main():
         print('  Conferência incompleta: o resultado não foi gravado.')
     else:
         args.resultado.write_text(json.dumps(dict(celulas=celulas, batem=batem, municipios=len(unicos), lista=unicos,
-                                                  arquivos=[a.name for a in arquivos]),
+                                                  arquivos=[a.name for a in arquivos],
+                                                  data=datetime.date.today().isoformat()),
                                              ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         print('gravado', args.resultado)
     sys.exit(0 if not divergencias else 1)

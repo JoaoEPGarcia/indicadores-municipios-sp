@@ -293,9 +293,16 @@ def numeros_da_conferencia_da_planilha(N):
 def numeros_do_relatorio(N, modelo):
     """Os números que só o relatório em LaTeX usa: a data da capa, a regra da declaração, as linhas de cada tabela
     do modelo, as medidas por pasta de exibição, a conferência da base e o tamanho do Teste contra o passado."""
-    hoje = datetime.date.today()
-    N.add('NumMesCapa', comum.MESES[hoje.month - 1], 'mês da capa do relatório (o mês em que o registro foi gerado)')
-    N.add('NumAnoCapa', hoje.year, 'ano da capa do relatório (o ano em que o registro foi gerado)')
+    # A data da capa é a da conferência da planilha gravada (o último passo que traz número novo), e não a do
+    # relógio: rodar o script de novo noutro mês não muda o registro.
+    r = json.loads(RESULTADO_EXCEL.read_text(encoding='utf-8')) if RESULTADO_EXCEL.exists() else {}
+    dia = datetime.date.fromisoformat(r['data']) if 'data' in r else None
+    N.add('NumMesCapa', comum.MESES[dia.month - 1] if dia else PENDENTE,
+          'mês da capa do relatório (o da conferência da planilha gravada em excel/resultado_conferencia_excel.json)',
+          'scripts/conferir_excel.py')
+    N.add('NumAnoCapa', dia.year if dia else PENDENTE,
+          'ano da capa do relatório (o da conferência da planilha gravada em excel/resultado_conferencia_excel.json)',
+          'scripts/conferir_excel.py')
 
     sql = (RAIZ / 'sql' / '20_indicadores.sql').read_text(encoding='utf-8')
     baixo, alto = re.search(r'rc_liq\s*/\s*rc_liq_outros\s*<\s*([\d.]+)\s*OR\s*rc_liq\s*/\s*rc_liq_outros\s*>\s*([\d.]+)',

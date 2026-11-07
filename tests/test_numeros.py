@@ -5,8 +5,11 @@
 O script grava o README, relatorio/numeros.tex e relatorio/gerados/ dentro do repositório; por isso ele roda numa
 cópia (tests/apoio.py), e os testes leem o que ele escreveu. Os valores esperados vêm de fora do código: dos CSV
 de dados/tratados/, contados aqui com pandas, das páginas gravadas do PBIR e do passo a passo escrito à mão
-(excel/PASSO_A_PASSO.md), que traz as fórmulas como o leitor as digita no Excel em português.
+(excel/PASSO_A_PASSO.md), que traz as fórmulas como o leitor as digita no Excel em português. A data da capa
+do relatório sai de dado versionado (o dia da conferência da planilha, gravado no resultado dela), e não do
+relógio: a cópia troca esse dia por outro, de propósito, e o registro tem de segui-lo.
 """
+import json
 import re
 import unittest
 
@@ -16,6 +19,7 @@ from apoio import REPO, Copia
 
 TRATADOS = REPO / 'dados' / 'tratados'
 PASSO = (REPO / 'excel' / 'PASSO_A_PASSO.md').read_text(encoding='utf-8')
+DIA_DA_CONFERENCIA = '2027-03-15'      # um dia que não é hoje: se a capa seguisse o relógio, o teste pegaria
 
 
 def sem_espacos(f):
@@ -31,6 +35,9 @@ class RegistroGerado(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.copia = Copia()
+        resultado = cls.copia.raiz / 'excel' / 'resultado_conferencia_excel.json'
+        r = json.loads(resultado.read_text(encoding='utf-8'))
+        resultado.write_text(json.dumps({**r, 'data': DIA_DA_CONFERENCIA}), encoding='utf-8')
         cls.codigo, cls.saida = cls.copia.rodar('numeros.py')
         cls.readme = cls.copia.ler('README.md')
 
@@ -57,6 +64,11 @@ class RegistroGerado(unittest.TestCase):
     def test_readme_usa_os_dois_niveis_do_intervalo_de_previsao(self):
         menor, maior = sorted(pd.read_csv(TRATADOS / 'backtest_cobertura.csv').nivel.unique())
         self.assertIn(f'com os Intervalos de previsão de {menor}% e de {maior}%', self.readme)
+
+    def test_capa_do_relatorio_tem_o_mes_e_o_ano_da_conferencia_gravada(self):
+        registro = self.copia.ler('relatorio/numeros.tex')
+        self.assertIn(r'\newcommand{\NumMesCapa}{Março}', registro)
+        self.assertIn(r'\newcommand{\NumAnoCapa}{2027}', registro)
 
     def test_procx_do_relatorio_e_a_do_passo_a_passo(self):
         esperado = re.search(r'^\| E13 \| `(=[^`]+)`', PASSO, re.M).group(1)
