@@ -397,7 +397,7 @@ def aba_explorar(a, N):
     a.texto('B5', 'Segmentação: com a tabela dinâmica selecionada, Inserir → Segmentação de Dados → municipio. Ponha-a na '
                   f'coluna B, a partir da linha 8, e escolha {N["NumExemplo"]["valor"]}.', cor=TINTA2)
     a.texto('B6', f'A área a partir da linha 8 fica vazia para as duas: a tabela dinâmica começa em {CANTO_DINAMICA}. '
-                  'O passo a passo (excel/PASSO_A_PASSO.md, passo 7) explica cada escolha.', 9, cor=TINTA2)
+                  'O passo a passo (excel/PASSO_A_PASSO.md, passo 5) explica cada escolha.', 9, cor=TINTA2)
 
 
 def aba_leiame(a, N):
