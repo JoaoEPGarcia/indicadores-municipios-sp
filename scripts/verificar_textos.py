@@ -1,19 +1,23 @@
 """Verificador dos textos entregues: diz se o README, o relatório e o PDF estão prontos para mostrar.
 
-    python scripts/verificar_textos.py
+    python scripts/verificar_textos.py [--limite-pdflatex SEGUNDOS]
 
-Roda na raiz do repositório (rode antes scripts/numeros.py, que escreve relatorio/numeros.tex). Sai com
-código 0 quando tudo passa e 1 quando algo falha; cada falha aponta o arquivo, a linha e o trecho.
+Roda na raiz do repositório, que tem de ser um repositório git (rode antes scripts/numeros.py, que
+escreve relatorio/numeros.tex). Sai com código 0 quando tudo passa e 1 quando algo falha; cada falha
+aponta o arquivo, a linha e o trecho.
 
 Falha quando:
-  - um número usado (marcador {{NumX}} do modelo do README, macro \\NumX do LaTeX, número registrado
-    pelas figuras e pela planilha em numeros_usados.json) está PENDENTE ou não existe no registro;
+  - um número usado (marcador {{NumX}} do modelo do README, macro \\NumX de qualquer .tex de relatorio/,
+    gerado ou não, número registrado pelas figuras e pela planilha em numeros_usados.json) está
+    PENDENTE, não existe no registro ou é um marcador fora da forma {{NumX}} exata;
   - há número digitado, fora de marcador ou macro, em docs/README.modelo.md ou num .tex de relatorio/
-    (exceções na lista EXCECOES, abaixo; o preâmbulo do kit e os .tex gerados não se leem);
-  - algum texto versionado (.md, .tex, .txt), o README ou o PDF diz que o painel foi publicado na web;
+    escrito à mão (exceções na lista EXCECOES, abaixo, e no ADR 0002; o preâmbulo do kit não se lê);
+  - algum arquivo de texto versionado, de qualquer extensão, ou o PDF diz que o painel foi publicado
+    na web;
   - o README montado ou o PDF mostram PENDENTE ou um marcador que sobrou;
-  - relatorio/relatorio.tex não compila em pdfLaTeX, nas duas passadas, sem erro. Compilado, o PDF
-    vai para relatorio/relatorio.pdf.
+  - relatorio/relatorio.tex não compila em pdfLaTeX, nas duas passadas, sem erro e sem referência ou
+    citação quebrada. O PDF e os .aux antigos se apagam antes; compilado, o PDF vai para
+    relatorio/relatorio.pdf.
 
 Quando o modelo do README, o relatório ou o PDF ainda não existem, a verificação correspondente é
 pulada e o comando diz isso. Os testes ficam em tests/ (python -m unittest discover -s tests).
@@ -55,6 +59,13 @@ class Verificacao:
         self.falhas += len(problemas)
         self.linhas.append(f'[FALHA] {nome}')
         self.linhas += [f'    {p}' for p in problemas]
+
+    def resultado(self, nome, problemas):
+        """[OK] sem problema; [FALHA], com a lista, com algum."""
+        if problemas:
+            self.falha(nome, problemas)
+        else:
+            self.ok(nome)
 
 
 # ── número digitado ─────────────────────────────────────────────────────
@@ -145,12 +156,8 @@ def conferir_digitados(v, caminho, texto):
         achados, uso = numeros_digitados(texto, SINTAXE_LATEX, MACRO), r'uma macro \Num...'
     else:
         achados, uso = numeros_digitados(texto, SINTAXE_MARKDOWN, QUALQUER_MARCADOR), 'um marcador {{Num...}}'
-    nome = f'nenhum número digitado em {caminho}'
-    if achados:
-        v.falha(nome, [f'{caminho}:{n}: número digitado "{num}" (use {uso}): {trecho}'
-                       for n, num, trecho in achados])
-    else:
-        v.ok(nome)
+    v.resultado(f'nenhum número digitado em {caminho}',
+                [f'{caminho}:{n}: número digitado "{num}" (use {uso}): {trecho}' for n, num, trecho in achados])
 
 
 # ── marcadores, macros e PENDENTE ───────────────────────────────────────
@@ -221,10 +228,7 @@ def conferir_registro(v, raiz, usos):
             problemas.append(f'{onde}: {num} não existe no registro ({REGISTRO_TEX})')
         elif registro[num] == PENDENTE:
             problemas.append(f'{onde}: {num} está {PENDENTE}')
-    if problemas:
-        v.falha(nome, problemas)
-    else:
-        v.ok(nome)
+    v.resultado(nome, problemas)
 
 
 # ── "publicado na web" ──────────────────────────────────────────────────
@@ -311,10 +315,7 @@ def conferir_publicacao(v, raiz, entregues):
             continue
         lidos += 1
         problemas += [f'{caminho}:{n}: {trecho}' for n, trecho in frases_de_publicacao(texto)]
-    if problemas:
-        v.falha(nome, problemas)
-    else:
-        v.ok(f'{nome} ({lidos} arquivos de texto)')
+    v.resultado(f'{nome} ({lidos} arquivos de texto)', problemas)
 
 
 # ── compilação do relatório ─────────────────────────────────────────────
@@ -368,9 +369,14 @@ def referencias_quebradas(log, textos):
 
 
 def conferir_compilacao(v, raiz, limite, textos):
-    """Compila relatorio/relatorio.tex em duas passadas, como o kit manda. Os arquivos auxiliares ficam
-    numa pasta temporária; o PDF vai para relatorio/relatorio.pdf. limite: segundos por passada."""
-    nome = f'{RELATORIO_TEX} compila em pdfLaTeX, duas passadas, sem erro'
+    v.resultado(f'{RELATORIO_TEX} compila em pdfLaTeX, duas passadas, sem erro',
+                problemas_da_compilacao(raiz, limite, textos))
+
+
+def problemas_da_compilacao(raiz, limite, textos):
+    """Compila relatorio/relatorio.tex em duas passadas, como o kit manda, e devolve os problemas. Os
+    arquivos auxiliares ficam numa pasta temporária; sem problema, o PDF vai para relatorio/relatorio.pdf.
+    limite: segundos por passada. textos: os .tex do relatório, para achar o \\ref quebrado."""
     pasta = (raiz / RELATORIO_TEX).parent
     # Saídas de uma compilação anterior: o PDF antigo seria conferido se esta falhar, e um .aux na pasta
     # do relatório é lido no lugar do novo, escondendo referência quebrada.
@@ -384,44 +390,37 @@ def conferir_compilacao(v, raiz, limite, textos):
                                     f'-output-directory={saida}', Path(RELATORIO_TEX).name],
                                    cwd=pasta, capture_output=True, timeout=limite)
             except FileNotFoundError:
-                v.falha(nome, ['pdflatex não está no PATH: instale o MiKTeX (ou o TeX Live) e abra outro terminal'])
-                return
+                return ['pdflatex não está no PATH: instale o MiKTeX (ou o TeX Live) e abra outro terminal']
             except subprocess.TimeoutExpired:
-                v.falha(nome, [f'pdflatex passou de {limite:g} s na passada {passada} e foi interrompido '
-                               '(laço de macro? Rode pdflatex à mão para ver onde para)'])
-                return
+                return [f'pdflatex passou de {limite:g} s na passada {passada} e foi interrompido '
+                        '(laço de macro? Rode pdflatex à mão para ver onde para)']
             log = Path(saida, 'relatorio.log')
             log = log.read_text(encoding='utf-8', errors='replace') if log.exists() else r.stdout.decode(errors='replace')
             erros = erros_do_log(log, pasta, raiz)
             if r.returncode != 0 or erros:
                 erros = erros or [(RELATORIO_TEX, f'pdflatex saiu com código {r.returncode}')]
-                v.falha(nome, [f'{onde}: {erro} (passada {passada})' for onde, erro in erros])
-                return
+                return [f'{onde}: {erro} (passada {passada})' for onde, erro in erros]
         quebradas = referencias_quebradas(log, textos)
         if quebradas:
-            v.falha(nome, [f'{onde}: {erro} (depois da passada 2)' for onde, erro in quebradas])
-            return
+            return [f'{onde}: {erro} (depois da passada 2)' for onde, erro in quebradas]
         shutil.copyfile(Path(saida, 'relatorio.pdf'), raiz / RELATORIO_PDF)
-    v.ok(nome)
+    return []
 
 
 # ── o texto que o leitor vê: PDF e README montado ───────────────────────
-def conferir_texto_final(v, caminho, paginas, publicacao):
-    """paginas: [(onde, texto)]. Falha se o leitor veria PENDENTE ou um marcador que sobrou e, com
-    publicacao=True, a frase de publicação na web. O README é texto versionado, e a conferência da
-    publicação já o lê; o PDF não, e só aqui se procura a frase nele."""
+def conferir_texto_final(v, caminho, trechos, publicacao):
+    """trechos: [(onde, texto)], as linhas do README ou as páginas do PDF. Falha se o leitor veria
+    PENDENTE ou um marcador que sobrou e, com publicacao=True, a frase de publicação na web. O README é
+    texto versionado, e a conferência da publicação já o lê; o PDF não, e só aqui se procura a frase nele."""
     nome = f'{caminho} não mostra {PENDENTE}, marcador sobrando' + (' nem publicação na web' if publicacao else '')
     problemas = []
-    for onde, texto in paginas:
+    for onde, texto in trechos:
         linhas = texto.splitlines()
         for m in re.finditer(PENDENTE + '|' + QUALQUER_MARCADOR.pattern, texto):
             problemas.append(f'{onde}: "{m.group(0)}" em: {linhas[linha_de(texto, m.start()) - 1].strip()}')
         if publicacao:
             problemas += [f'{onde}: publicação na web em: {trecho}' for _, trecho in frases_de_publicacao(texto)]
-    if problemas:
-        v.falha(nome, problemas)
-    else:
-        v.ok(nome)
+    v.resultado(nome, problemas)
 
 
 def conferir_pdf(v, raiz):
