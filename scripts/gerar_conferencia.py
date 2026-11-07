@@ -2,9 +2,9 @@
 
     python scripts/gerar_conferencia.py
 
-Lê o SQLite e escreve, para três municípios de faixas diferentes, o que cada medida DAX da
-especificação tem de devolver. Os três são sorteados com semente fixa, um por faixa de porte
-(pequeno, médio, grande), entre os que têm todos os indicadores em 2024.
+Lê o SQLite e escreve, para três municípios de faixas diferentes, o que cada medida DAX do
+modelo (powerbi/painel-municipios-sp.SemanticModel) tem de devolver. Os três são sorteados com semente fixa, um por faixa de porte
+(pequeno, médio, grande), entre os que têm os sete indicadores comparáveis em 2023.
 """
 import os
 import random

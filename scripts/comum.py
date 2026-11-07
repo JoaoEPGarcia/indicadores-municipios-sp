@@ -1,4 +1,4 @@
-"""Partes comuns dos scripts: caminhos, paleta e o município de exemplo."""
+"""Partes comuns dos scripts: caminhos e o município de exemplo. As cores vêm do kit, em estilo/."""
 import csv
 import os
 import random
@@ -7,25 +7,12 @@ import re
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRATADOS = os.path.join(RAIZ, 'dados', 'tratados')
 GRAFICOS = os.path.join(RAIZ, 'graficos')
-CAPTURA = os.path.join(RAIZ, 'captura-para-o-site')
 EXCEL = os.path.join(RAIZ, 'excel')
 
 # Sorteio do município de exemplo: semente fixa (a data da sessão), entre os que têm série completa.
 SEMENTE = 20261014
 INDICADORES_PAINEL = ['receita_pc', 'dependencia_transf', 'saude_pc', 'educacao_pc', 'pib_pc', 'ideb', 'pre_natal_7mais']
 ANOS = list(range(2015, 2026))
-
-
-# Paleta do relatório de 175 páginas da pesquisa de gestão hospitalar no SUS-SP.
-PALETA = {
-    'azul': '#377EB8', 'vermelho': '#E41A1C', 'verde': '#4DAF4A', 'roxo': '#984EA3',
-    'azulTexto': '#3579B1', 'verdeTexto': '#3C823B', 'tinta': '#332F38', 'cinza': '#403A45',
-    'zebra': '#F4F4F4', 'branco': '#FFFFFF',
-}
-
-
-def cores():
-    return dict(PALETA)
 
 
 def ler_csv(arquivo):

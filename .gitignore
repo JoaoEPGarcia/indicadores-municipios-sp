@@ -2,3 +2,8 @@
 __pycache__/
 dados/brutos/
 ~$*
+
+# Power BI Desktop: cache e configuração local do PBIP
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
+.env
