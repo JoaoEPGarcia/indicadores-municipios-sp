@@ -3,10 +3,10 @@
   "name": "p1_resumo_receita_pc",
   "position": {
     "x": 24,
-    "y": 156,
+    "y": 152,
     "z": 8000,
     "width": 296,
-    "height": 104,
+    "height": 116,
     "tabOrder": 7
   },
   "visual": {
@@ -82,7 +82,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "16D"
+                  "Value": "14D"
                 }
               }
             }

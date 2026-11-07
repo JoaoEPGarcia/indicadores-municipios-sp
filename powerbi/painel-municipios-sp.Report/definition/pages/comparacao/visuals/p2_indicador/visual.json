@@ -3,10 +3,10 @@
   "name": "p2_indicador",
   "position": {
     "x": 24,
-    "y": 136,
+    "y": 148,
     "z": 3000,
     "width": 320,
-    "height": 260,
+    "height": 248,
     "tabOrder": 2
   },
   "visual": {

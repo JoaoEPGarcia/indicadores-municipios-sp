@@ -3,10 +3,10 @@
   "name": "p1_resumo_educacao_pc",
   "position": {
     "x": 648,
-    "y": 156,
+    "y": 152,
     "z": 10000,
     "width": 296,
-    "height": 104,
+    "height": 116,
     "tabOrder": 9
   },
   "visual": {
@@ -82,7 +82,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "16D"
+                  "Value": "14D"
                 }
               }
             }

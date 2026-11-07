@@ -168,7 +168,8 @@ class Visual:
         elif self.tipo != 'textbox':
             recipiente['title'] = [{'properties': {'show': lit(False)}}]
         if self.subtitulo:
-            recipiente['subTitle'] = [{'properties': {'show': lit(True), 'text': lit(self.subtitulo)}}]
+            recipiente['subTitle'] = [{'properties': {'show': lit(True), 'text': lit(self.subtitulo),
+                                                      'titleWrap': lit(True)}}]
         if self.fundo:
             recipiente['background'] = [{'properties': {'show': lit(True), 'color': cor_fixa(self.fundo),
                                                         'transparency': lit(0.0)}}]
@@ -312,7 +313,7 @@ def pagina_municipio(c):
     q1, q3 = medida('1º quartil da faixa'), medida('3º quartil da faixa')
     visuais = [
         titulo_da_pagina('p1_titulo', 'Indicadores do município'),
-        segmentacao('p1_municipio', (24, 64, 320, 64), MUNICIPIO, 'Município',
+        segmentacao('p1_municipio', (24, 64, 320, 72), MUNICIPIO, 'Município',
                     'Lista suspensa com busca: escolhe o município que todas as páginas mostram.',
                     ordem=1, escolhido=c['exemplo'], sincronia=GRUPO_MUNICIPIO),
         segmentacao_de_indicador('p1_indicador', (800, 272, 456, 156), 2, c),
@@ -345,14 +346,14 @@ def pagina_municipio(c):
     # Indicador não os filtra (ver visualInteractions na página).
     for i, (ident, nome) in enumerate(zip(c['ids_resumo'], c['resumo'])):
         visuais.append(Visual(
-            f'p1_resumo_{ident}', (24 + i * 312, 156, 296, 104), 'multiRowCard',
+            f'p1_resumo_{ident}', (24 + i * 312, 152, 296, 116), 'multiRowCard',
             f'Cartão de resumo: o último valor de {nome} no município, com a mediana da faixa no mesmo ano e o ano.',
             ordem=7 + i, titulo=nome,
             papeis={'Values': [projecao(medida('Último valor'), 'município'),
                                projecao(medida('Último valor da faixa'), 'mediana da faixa'),
                                projecao(medida('Ano do último valor'), 'ano')]},
             filtros=[filtro('so_este_indicador', ID_INDICADOR, condicao_em(ID_INDICADOR, [ident]))],
-            objetos={'dataLabels': [{'properties': {'color': cor_fixa(ep.TINTA), 'fontSize': lit(16.0)}}]}))
+            objetos={'dataLabels': [{'properties': {'color': cor_fixa(ep.TINTA), 'fontSize': lit(14.0)}}]}))
     visuais += [
         Visual('p1_tabela', (800, 440, 456, 244), 'tableEx',
                'Tabela por ano: o valor do município, a mediana da faixa, a diferença para a mediana e a posição na faixa.',
@@ -380,11 +381,11 @@ def pagina_comparacao(c):
          'Value': literal(cor.upper())} for caso, cor in ((1, ep.DESTAQUE), (0, ep.NEUTRO))]}}
     visuais = [
         titulo_da_pagina('p2_titulo', 'Comparação na faixa'),
-        segmentacao('p2_municipio', (24, 64, 320, 56), coluna('sel_municipio', 'municipio'), 'Município',
+        segmentacao('p2_municipio', (24, 64, 320, 72), coluna('sel_municipio', 'municipio'), 'Município',
                     'Lista suspensa com busca: escolhe o município destacado na dispersão. '
                     'Ela não filtra os outros municípios da faixa.', ordem=1, escolhido=c['exemplo']),
-        segmentacao_de_indicador('p2_indicador', (24, 136, 320, 260), 2, c),
-        segmentacao('p2_ano', (24, 412, 320, 56), ANO, 'Ano',
+        segmentacao_de_indicador('p2_indicador', (24, 148, 320, 248), 2, c),
+        segmentacao('p2_ano', (24, 408, 320, 72), ANO, 'Ano',
                     'Lista suspensa: escolhe o ano da comparação.', ordem=3, escolhido=c['ano_padrao']),
         Visual('p2_dispersao', (360, 64, 600, 636), 'scatterChart',
                'Dispersão: o município escolhido, em destaque, está no meio ou na ponta dos municípios da mesma '
@@ -412,7 +413,7 @@ def pagina_comparacao(c):
                'Cartão: a mediana do Indicador entre os municípios da mesma faixa, no ano escolhido.', ordem=7),
         cartao('p2_diferenca', (980, 520, 276, 140), medida('Diferença do escolhido'), 'Diferença para a mediana',
                'Cartão: a diferença do município escolhido para a mediana da faixa, em %.', ordem=8),
-        caixa_de_texto('p2_nota', (24, 484, 320, 216), 'Nota de leitura da dispersão.',
+        caixa_de_texto('p2_nota', (24, 492, 320, 208), 'Nota de leitura da dispersão.',
                        ['Cada ponto é um dos Municípios parecidos (mesma Faixa de porte) que tem dado no ano.',
                         'Posição na faixa: 0% é o menor valor da faixa, e 100%, o maior.',
                         'A página mostra posição e grupo, e não uma lista do maior ao menor: nenhum lado do eixo é, '
@@ -433,10 +434,10 @@ def pagina_previsao(c):
              'Projeto de portfólio feito com dado público.')
     visuais = [
         titulo_da_pagina('p3_titulo', 'Previsão da receita'),
-        segmentacao('p3_municipio', (24, 64, 320, 56), MUNICIPIO, 'Município',
+        segmentacao('p3_municipio', (24, 64, 320, 72), MUNICIPIO, 'Município',
                     'Lista suspensa com busca: escolhe o município da previsão (a mesma escolha da página Município).',
                     ordem=1, escolhido=c['exemplo'], sincronia=GRUPO_MUNICIPIO),
-        Visual('p3_previsao', (24, 136, 840, 480), 'lineChart',
+        Visual('p3_previsao', (24, 148, 840, 468), 'lineChart',
                'Gráfico de linhas: a receita corrente observada do município e a prevista para os próximos anos, '
                'com os Intervalos de previsão de 80% e de 95%.',
                ordem=2, titulo='Receita corrente observada e prevista, com os Intervalos de previsão',
@@ -504,14 +505,16 @@ def pagina_como_ler(c):
         Visual('p4_erro', (24, 440, 400, 272), 'lineChart',
                'Gráfico de linhas: o erro médio absoluto de cada método de previsão, por horizonte, no teste contra o passado.',
                ordem=2, titulo=f'{c["metodo_escolhido"]}: o método usado na previsão',
-               subtitulo='Erro médio absoluto ao prever o passado, por anos à frente',
+               # Sem legenda: os nomes dos métodos não cabem nela; o subtítulo diz qual linha é qual cor.
+               subtitulo='Erro médio absoluto ao prever o passado, por anos à frente. Em vermelho, o método usado; '
+                         f'em cinza, os outros dois: {" e ".join(c["outros_metodos"])}.',
                papeis={'Category': [projecao(coluna('backtest_metodos', 'horizonte'), 'Anos à frente', ativa=True)],
                        'Series': [projecao(metodo, 'Método')],
                        'Y': [projecao(erro, 'Erro médio absoluto')]},
                ordenar_por=coluna('backtest_metodos', 'horizonte'),
                objetos={'dataPoint': [cor_do_valor(metodo, c['metodo_escolhido'], cor_tema(0))]
                         + [cor_do_valor(metodo, m, cor_tema(1)) for m in c['outros_metodos']],
-                        'legend': [{'properties': {'show': lit(True), 'position': lit('Top')}}],
+                        'legend': [{'properties': {'show': lit(False)}}],
                         'categoryAxis': [{'properties': {'axisType': lit('Categorical')}}],
                         'valueAxis': [{'properties': {'showAxisTitle': lit(False)}}]}),
         Visual('p4_cobertura', (440, 440, 400, 272), 'clusteredColumnChart',

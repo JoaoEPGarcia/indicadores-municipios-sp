@@ -284,6 +284,13 @@
                   "Value": "'Em vermelho, o município escolhido. População do Censo 2022, em escala logarítmica.'"
                 }
               }
+            },
+            "titleWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
             }
           }
         }

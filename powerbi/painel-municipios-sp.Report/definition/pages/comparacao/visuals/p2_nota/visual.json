@@ -3,10 +3,10 @@
   "name": "p2_nota",
   "position": {
     "x": 24,
-    "y": 484,
+    "y": 492,
     "z": 10000,
     "width": 320,
-    "height": 216,
+    "height": 208,
     "tabOrder": 9
   },
   "visual": {
