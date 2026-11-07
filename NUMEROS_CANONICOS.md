@@ -74,6 +74,6 @@ Cada número impresso no README, no relatório e nos títulos das figuras tem um
 | `\NumCobNoventaCincoPior` | 91 | cobertura do intervalo de 95% na pior origem deixada de fora, depois do ajuste, em % | `scripts/modelo.py` | (ainda não usado) |
 | `\NumCobNoventaCincoPiorOrigem` | 2022 | a pior origem deixada de fora para o intervalo de 95% | `scripts/modelo.py` | (ainda não usado) |
 | `\NumEscalaNoventaCinco` | 1,15 | fator de alargamento do intervalo de 95% | `scripts/modelo.py` | (ainda não usado) |
-| `\NumCelulasExcel` | PENDENTE | células da aba Painel conferidas contra o SQLite | `scripts/conferir_excel.py` | (ainda não usado) |
-| `\NumCelulasExcelBatem` | PENDENTE | células da aba Painel iguais ao SQLite | `scripts/conferir_excel.py` | (ainda não usado) |
-| `\NumMunicipiosExcel` | PENDENTE | municípios testados na planilha | `scripts/conferir_excel.py` | (ainda não usado) |
+| `\NumCelulasExcel` | 256 | células da aba Painel conferidas contra o SQLite | `scripts/conferir_excel.py` | (ainda não usado) |
+| `\NumCelulasExcelBatem` | 256 | células da aba Painel iguais ao SQLite | `scripts/conferir_excel.py` | (ainda não usado) |
+| `\NumMunicipiosExcel` | 4 | municípios testados na planilha | `scripts/conferir_excel.py` | (ainda não usado) |
