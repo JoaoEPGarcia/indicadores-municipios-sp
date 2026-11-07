@@ -450,7 +450,7 @@ def pagina_previsao(c):
                     ordem=1, escolhido=c['exemplo'], sincronia=GRUPO_MUNICIPIO),
         Visual('p3_previsao', (24, 148, 840, 468), 'lineChart',
                'Gráfico de linhas: a receita corrente observada do município e a prevista para os próximos anos, '
-               'com os Intervalos de previsão de 80% e de 95%.',
+               f'com os Intervalos de previsão de {" e de ".join(f"{n}%" for n in c["niveis"])}.',
                ordem=2, titulo='Receita corrente observada e prevista, com os Intervalos de previsão',
                subtitulo=f'R$ milhões, a preços de {base}. O eixo vertical não começa no zero.',
                papeis={'Category': [projecao(ANO, ativa=True)],
@@ -493,8 +493,8 @@ def pagina_como_ler(c):
         'Fontes. Receitas e despesas: Siconfi, Tesouro Nacional (DCA, anexos I-C e I-E). População, PIB dos '
         'Municípios e IPCA: IBGE. Ideb: INEP. Consultas de pré-natal: SINASC, Ministério da Saúde (DataSUS). '
         'Todas pedem que se credite a fonte; o README traz a condição de uso de cada uma.',
-        'Cuidados. A população muda de base com o Censo 2022, e as séries por habitante dão um degrau entre 2021 e '
-        '2022 nos municípios que o Censo corrigiu. O Ideb é bienal, e município sem rede municipal fica sem Ideb. '
+        'Cuidados. A população muda de base com o Censo 2022, e as séries por habitante dão um degrau no ano do '
+        'Censo 2022 nos municípios que ele corrigiu. O Ideb é bienal, e município sem rede municipal fica sem Ideb. '
         'Municípios parecidos quer dizer só a mesma Faixa de porte.',
     ]
     # Largura de cada coluna da tabela dos Indicadores: somadas, cabem na tabela sem rolagem lateral, e o
@@ -518,7 +518,7 @@ def pagina_como_ler(c):
                ordem=2, titulo=f'{c["metodo_escolhido"]}: o método usado na previsão',
                # Sem legenda: os nomes dos métodos não cabem nela; o subtítulo diz qual linha é qual cor.
                subtitulo='Erro médio absoluto ao prever o passado, por anos à frente. Em vermelho, o método usado; '
-                         f'em cinza, os outros dois: {" e ".join(c["outros_metodos"])}.',
+                         f'em cinza, os demais: {" e ".join(c["outros_metodos"])}.',
                papeis={'Category': [projecao(coluna('backtest_metodos', 'horizonte'), 'Anos à frente', ativa=True)],
                        'Series': [projecao(metodo, 'Método')],
                        'Y': [projecao(erro, 'Erro médio absoluto')]},
