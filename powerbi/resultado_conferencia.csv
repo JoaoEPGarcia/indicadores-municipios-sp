@@ -1,0 +1,175 @@
+municipio,indicador,ano,medida,esperado,obtido,casas,bate
+Santa Lúcia,receita_pc,2023,Valor,5176.4883,5176.488306130611,4,1
+Santa Lúcia,receita_pc,2023,Mediana da faixa,6672.4667,6672.466727587788,4,1
+Santa Lúcia,receita_pc,2023,1º quartil da faixa,5858.4509,5858.450859964447,4,1
+Santa Lúcia,receita_pc,2023,3º quartil da faixa,7571.5009,7571.500926093431,4,1
+Santa Lúcia,receita_pc,2023,Diferença para a mediana,-0.2242,-0.22420170568583703,4,1
+Santa Lúcia,receita_pc,2023,Posição na faixa,0.0738,0.07377049180327869,4,1
+Santa Lúcia,receita_pc,2023,Municípios com dado na faixa,123.0,123.0,0,1
+Santa Lúcia,dependencia_transf,2023,Valor,86.3451,86.34509440926045,4,1
+Santa Lúcia,dependencia_transf,2023,Mediana da faixa,84.9213,84.92133468147613,4,1
+Santa Lúcia,dependencia_transf,2023,1º quartil da faixa,80.9439,80.94388230119654,4,1
+Santa Lúcia,dependencia_transf,2023,3º quartil da faixa,88.0551,88.05513533199073,4,1
+Santa Lúcia,dependencia_transf,2023,Diferença para a mediana,0.0168,0.016765630605366517,4,1
+Santa Lúcia,dependencia_transf,2023,Posição na faixa,0.6475,0.6475409836065574,4,1
+Santa Lúcia,dependencia_transf,2023,Municípios com dado na faixa,123.0,123.0,0,1
+Santa Lúcia,saude_pc,2023,Valor,1506.7905,1506.7904627488233,4,1
+Santa Lúcia,saude_pc,2023,Mediana da faixa,1895.7663,1895.7663097828238,4,1
+Santa Lúcia,saude_pc,2023,1º quartil da faixa,1678.4652,1678.465235111989,4,1
+Santa Lúcia,saude_pc,2023,3º quartil da faixa,2154.7863,2154.786251693753,4,1
+Santa Lúcia,saude_pc,2023,Diferença para a mediana,-0.2052,-0.20518132695298347,4,1
+Santa Lúcia,saude_pc,2023,Posição na faixa,0.1148,0.11475409836065574,4,1
+Santa Lúcia,saude_pc,2023,Municípios com dado na faixa,123.0,123.0,0,1
+Santa Lúcia,educacao_pc,2023,Valor,1962.5995,1962.5995453574908,4,1
+Santa Lúcia,educacao_pc,2023,Mediana da faixa,2109.8582,2109.85822044661,4,1
+Santa Lúcia,educacao_pc,2023,1º quartil da faixa,1759.8341,1759.8340894615694,4,1
+Santa Lúcia,educacao_pc,2023,3º quartil da faixa,2489.2256,2489.225584799966,4,1
+Santa Lúcia,educacao_pc,2023,Diferença para a mediana,-0.0698,-0.06979553112244101,4,1
+Santa Lúcia,educacao_pc,2023,Posição na faixa,0.3607,0.36065573770491804,4,1
+Santa Lúcia,educacao_pc,2023,Municípios com dado na faixa,123.0,123.0,0,1
+Santa Lúcia,pib_pc,2023,Valor,28354.9071,28354.907084426042,4,1
+Santa Lúcia,pib_pc,2023,Mediana da faixa,42968.9712,42968.971170228484,4,1
+Santa Lúcia,pib_pc,2023,1º quartil da faixa,32649.2385,32649.238452357407,4,1
+Santa Lúcia,pib_pc,2023,3º quartil da faixa,58014.5046,58014.50460030754,4,1
+Santa Lúcia,pib_pc,2023,Diferença para a mediana,-0.34009999999999996,-0.34010737720264417,4,1
+Santa Lúcia,pib_pc,2023,Posição na faixa,0.1557,0.1557377049180328,4,1
+Santa Lúcia,pib_pc,2023,Municípios com dado na faixa,123.0,123.0,0,1
+Santa Lúcia,ideb,2023,Valor,6.6,6.6,4,1
+Santa Lúcia,ideb,2023,Mediana da faixa,6.4,6.4,4,1
+Santa Lúcia,ideb,2023,1º quartil da faixa,6.1,6.1,4,1
+Santa Lúcia,ideb,2023,3º quartil da faixa,6.7,6.7,4,1
+Santa Lúcia,ideb,2023,Diferença para a mediana,0.031200000000000002,0.03124999999999989,4,1
+Santa Lúcia,ideb,2023,Posição na faixa,0.6283,0.6283185840707964,4,1
+Santa Lúcia,ideb,2023,Municípios com dado na faixa,114.0,114.0,0,1
+Santa Lúcia,pre_natal_7mais,2023,Valor,80.7692,80.76923076923077,4,1
+Santa Lúcia,pre_natal_7mais,2023,Mediana da faixa,86.6667,86.66666666666667,4,1
+Santa Lúcia,pre_natal_7mais,2023,1º quartil da faixa,81.9805,81.98051948051948,4,1
+Santa Lúcia,pre_natal_7mais,2023,3º quartil da faixa,90.6645,90.66448801742919,4,1
+Santa Lúcia,pre_natal_7mais,2023,Diferença para a mediana,-0.068,-0.06804733727810651,4,1
+Santa Lúcia,pre_natal_7mais,2023,Posição na faixa,0.2049,0.20491803278688525,4,1
+Santa Lúcia,pre_natal_7mais,2023,Municípios com dado na faixa,123.0,123.0,0,1
+Santa Lúcia,receita_total,2026,Receita prevista,43.896,43.8962356247034,3,1
+Santa Lúcia,receita_total,2026,Limite inferior 80%,38.734,38.734414629577664,3,1
+Santa Lúcia,receita_total,2026,Limite superior 80%,51.089,51.088747051540246,3,1
+Santa Lúcia,receita_total,2027,Receita prevista,46.14,46.14037695610775,3,1
+Santa Lúcia,receita_total,2027,Limite inferior 80%,39.486,39.48593603980847,3,1
+Santa Lúcia,receita_total,2027,Limite superior 80%,59.078,59.078493547258454,3,1
+Santa Lúcia,receita_total,2028,Receita prevista,48.499,48.499247266971174,3,1
+Santa Lúcia,receita_total,2028,Limite inferior 80%,39.861,39.86064727925355,3,1
+Santa Lúcia,receita_total,2028,Limite superior 80%,67.944,67.94400364215193,3,1
+Morro Agudo,receita_pc,2023,Valor,8074.3505,8074.350498488449,4,1
+Morro Agudo,receita_pc,2023,Mediana da faixa,5632.1841,5632.184122132335,4,1
+Morro Agudo,receita_pc,2023,1º quartil da faixa,4981.8982,4981.898155753907,4,1
+Morro Agudo,receita_pc,2023,3º quartil da faixa,6308.3063,6308.306263756916,4,1
+Morro Agudo,receita_pc,2023,Diferença para a mediana,0.4336,0.43360911564650956,4,1
+Morro Agudo,receita_pc,2023,Posição na faixa,0.9474,0.9473684210526315,4,1
+Morro Agudo,receita_pc,2023,Municípios com dado na faixa,115.0,115.0,0,1
+Morro Agudo,dependencia_transf,2023,Valor,77.6965,77.69645454006108,4,1
+Morro Agudo,dependencia_transf,2023,Mediana da faixa,76.188,76.18800936391514,4,1
+Morro Agudo,dependencia_transf,2023,1º quartil da faixa,70.3727,70.3726699245914,4,1
+Morro Agudo,dependencia_transf,2023,3º quartil da faixa,80.3507,80.35073306362983,4,1
+Morro Agudo,dependencia_transf,2023,Diferença para a mediana,0.019799999999999998,0.019798983970571938,4,1
+Morro Agudo,dependencia_transf,2023,Posição na faixa,0.5877,0.5877192982456141,4,1
+Morro Agudo,dependencia_transf,2023,Municípios com dado na faixa,115.0,115.0,0,1
+Morro Agudo,saude_pc,2023,Valor,2378.1621,2378.162054658463,4,1
+Morro Agudo,saude_pc,2023,Mediana da faixa,1522.92,1522.9199604769694,4,1
+Morro Agudo,saude_pc,2023,1º quartil da faixa,1356.8892,1356.8892286362507,4,1
+Morro Agudo,saude_pc,2023,3º quartil da faixa,1768.2233,1768.2232651683898,4,1
+Morro Agudo,saude_pc,2023,Diferença para a mediana,0.5616,0.5615804614666926,4,1
+Morro Agudo,saude_pc,2023,Posição na faixa,0.9474,0.9473684210526315,4,1
+Morro Agudo,saude_pc,2023,Municípios com dado na faixa,115.0,115.0,0,1
+Morro Agudo,educacao_pc,2023,Valor,2186.0378,2186.037797522174,4,1
+Morro Agudo,educacao_pc,2023,Mediana da faixa,1867.0927,1867.0927099253772,4,1
+Morro Agudo,educacao_pc,2023,1º quartil da faixa,1636.1287,1636.1286712214078,4,1
+Morro Agudo,educacao_pc,2023,3º quartil da faixa,2092.1419,2092.141897223164,4,1
+Morro Agudo,educacao_pc,2023,Diferença para a mediana,0.17079999999999998,0.1708244512451362,4,1
+Morro Agudo,educacao_pc,2023,Posição na faixa,0.7807,0.7807017543859649,4,1
+Morro Agudo,educacao_pc,2023,Municípios com dado na faixa,115.0,115.0,0,1
+Morro Agudo,pib_pc,2023,Valor,76835.0443,76835.04432692331,4,1
+Morro Agudo,pib_pc,2023,Mediana da faixa,57058.2404,57058.24043112442,4,1
+Morro Agudo,pib_pc,2023,1º quartil da faixa,40971.4572,40971.45719455095,4,1
+Morro Agudo,pib_pc,2023,3º quartil da faixa,70493.5912,70493.59122242453,4,1
+Morro Agudo,pib_pc,2023,Diferença para a mediana,0.34659999999999996,0.3466073216833889,4,1
+Morro Agudo,pib_pc,2023,Posição na faixa,0.807,0.8070175438596491,4,1
+Morro Agudo,pib_pc,2023,Municípios com dado na faixa,115.0,115.0,0,1
+Morro Agudo,ideb,2023,Valor,6.0,6.0,4,1
+Morro Agudo,ideb,2023,Mediana da faixa,6.5,6.5,4,1
+Morro Agudo,ideb,2023,1º quartil da faixa,6.1,6.1,4,1
+Morro Agudo,ideb,2023,3º quartil da faixa,6.7,6.7,4,1
+Morro Agudo,ideb,2023,Diferença para a mediana,-0.07690000000000001,-0.07692307692307693,4,1
+Morro Agudo,ideb,2023,Posição na faixa,0.1593,0.1592920353982301,4,1
+Morro Agudo,ideb,2023,Municípios com dado na faixa,114.0,114.0,0,1
+Morro Agudo,pre_natal_7mais,2023,Valor,89.759,89.75903614457832,4,1
+Morro Agudo,pre_natal_7mais,2023,Mediana da faixa,87.7698,87.76978417266187,4,1
+Morro Agudo,pre_natal_7mais,2023,1º quartil da faixa,83.5521,83.55214325477826,4,1
+Morro Agudo,pre_natal_7mais,2023,3º quartil da faixa,90.1537,90.15371298166461,4,1
+Morro Agudo,pre_natal_7mais,2023,Diferença para a mediana,0.0227,0.022664428204621796,4,1
+Morro Agudo,pre_natal_7mais,2023,Posição na faixa,0.6754,0.6754385964912281,4,1
+Morro Agudo,pre_natal_7mais,2023,Municípios com dado na faixa,115.0,115.0,0,1
+Morro Agudo,receita_total,2026,Receita prevista,242.712,242.71180890615884,3,1
+Morro Agudo,receita_total,2026,Limite inferior 80%,218.437,218.43675792903156,3,1
+Morro Agudo,receita_total,2026,Limite superior 80%,275.439,275.4390414132616,3,1
+Morro Agudo,receita_total,2027,Receita prevista,251.088,251.08842679968606,3,1
+Morro Agudo,receita_total,2027,Limite inferior 80%,219.355,219.35506331302483,3,1
+Morro Agudo,receita_total,2027,Limite superior 80%,302.3,302.30016838068275,3,1
+Morro Agudo,receita_total,2028,Receita prevista,259.754,259.7541436359072,3,1
+Morro Agudo,receita_total,2028,Limite inferior 80%,219.523,219.5229885269296,3,1
+Morro Agudo,receita_total,2028,Limite superior 80%,335.902,335.9017348495678,3,1
+Franco da Rocha,receita_pc,2023,Valor,4332.1624,4332.162419989193,4,1
+Franco da Rocha,receita_pc,2023,Mediana da faixa,5389.4619,5389.461944998926,4,1
+Franco da Rocha,receita_pc,2023,1º quartil da faixa,4537.5751,4537.575051586584,4,1
+Franco da Rocha,receita_pc,2023,3º quartil da faixa,6226.581,6226.5809899697515,4,1
+Franco da Rocha,receita_pc,2023,Diferença para a mediana,-0.1962,-0.19617905011665196,4,1
+Franco da Rocha,receita_pc,2023,Posição na faixa,0.1912,0.19117647058823528,4,1
+Franco da Rocha,receita_pc,2023,Municípios com dado na faixa,69.0,69.0,0,1
+Franco da Rocha,dependencia_transf,2023,Valor,68.44,68.43996811592169,4,1
+Franco da Rocha,dependencia_transf,2023,Mediana da faixa,59.6408,59.64083997460239,4,1
+Franco da Rocha,dependencia_transf,2023,1º quartil da faixa,53.1424,53.142362044237395,4,1
+Franco da Rocha,dependencia_transf,2023,3º quartil da faixa,67.3987,67.3986506595605,4,1
+Franco da Rocha,dependencia_transf,2023,Diferença para a mediana,0.1475,0.14753528194885143,4,1
+Franco da Rocha,dependencia_transf,2023,Posição na faixa,0.8235,0.8235294117647058,4,1
+Franco da Rocha,dependencia_transf,2023,Municípios com dado na faixa,69.0,69.0,0,1
+Franco da Rocha,saude_pc,2023,Valor,1015.9238,1015.923757424926,4,1
+Franco da Rocha,saude_pc,2023,Mediana da faixa,1436.6026,1436.6026421397594,4,1
+Franco da Rocha,saude_pc,2023,1º quartil da faixa,1177.7021,1177.7020998606247,4,1
+Franco da Rocha,saude_pc,2023,3º quartil da faixa,1745.6061,1745.6060583387336,4,1
+Franco da Rocha,saude_pc,2023,Diferença para a mediana,-0.2928,-0.29282897885267,4,1
+Franco da Rocha,saude_pc,2023,Posição na faixa,0.1176,0.11764705882352941,4,1
+Franco da Rocha,saude_pc,2023,Municípios com dado na faixa,69.0,69.0,0,1
+Franco da Rocha,educacao_pc,2023,Valor,1321.3023,1321.3023410560631,4,1
+Franco da Rocha,educacao_pc,2023,Mediana da faixa,1471.1437,1471.143653283492,4,1
+Franco da Rocha,educacao_pc,2023,1º quartil da faixa,1307.8622,1307.8622029929538,4,1
+Franco da Rocha,educacao_pc,2023,3º quartil da faixa,1826.2456,1826.2456494779985,4,1
+Franco da Rocha,educacao_pc,2023,Diferença para a mediana,-0.10189999999999999,-0.10185362380688887,4,1
+Franco da Rocha,educacao_pc,2023,Posição na faixa,0.2794,0.27941176470588236,4,1
+Franco da Rocha,educacao_pc,2023,Municípios com dado na faixa,69.0,69.0,0,1
+Franco da Rocha,pib_pc,2023,Valor,40459.0506,40459.05057887368,4,1
+Franco da Rocha,pib_pc,2023,Mediana da faixa,63547.1463,63547.14632179399,4,1
+Franco da Rocha,pib_pc,2023,1º quartil da faixa,48084.1321,48084.13212299503,4,1
+Franco da Rocha,pib_pc,2023,3º quartil da faixa,80019.0324,80019.03238949449,4,1
+Franco da Rocha,pib_pc,2023,Diferença para a mediana,-0.36329999999999996,-0.36332230602465415,4,1
+Franco da Rocha,pib_pc,2023,Posição na faixa,0.1029,0.10294117647058823,4,1
+Franco da Rocha,pib_pc,2023,Municípios com dado na faixa,69.0,69.0,0,1
+Franco da Rocha,ideb,2023,Valor,5.9,5.9,4,1
+Franco da Rocha,ideb,2023,Mediana da faixa,6.3,6.3,4,1
+Franco da Rocha,ideb,2023,1º quartil da faixa,6.1,6.1,4,1
+Franco da Rocha,ideb,2023,3º quartil da faixa,6.6,6.6,4,1
+Franco da Rocha,ideb,2023,Diferença para a mediana,-0.0635,-0.0634920634920634,4,1
+Franco da Rocha,ideb,2023,Posição na faixa,0.0735,0.07352941176470588,4,1
+Franco da Rocha,ideb,2023,Municípios com dado na faixa,69.0,69.0,0,1
+Franco da Rocha,pre_natal_7mais,2023,Valor,74.1266,74.12663755458516,4,1
+Franco da Rocha,pre_natal_7mais,2023,Mediana da faixa,82.606,82.60598503740648,4,1
+Franco da Rocha,pre_natal_7mais,2023,1º quartil da faixa,78.4685,78.46846846846847,4,1
+Franco da Rocha,pre_natal_7mais,2023,3º quartil da faixa,86.7435,86.74351585014409,4,1
+Franco da Rocha,pre_natal_7mais,2023,Diferença para a mediana,-0.1026,-0.10264810084864456,4,1
+Franco da Rocha,pre_natal_7mais,2023,Posição na faixa,0.1029,0.10294117647058823,4,1
+Franco da Rocha,pre_natal_7mais,2023,Municípios com dado na faixa,69.0,69.0,0,1
+Franco da Rocha,receita_total,2026,Receita prevista,708.276,708.2762777457218,3,1
+Franco da Rocha,receita_total,2026,Limite inferior 80%,644.738,644.7384453446903,3,1
+Franco da Rocha,receita_total,2026,Limite superior 80%,779.557,779.5566449121754,3,1
+Franco da Rocha,receita_total,2027,Receita prevista,716.133,716.1327525592376,3,1
+Franco da Rocha,receita_total,2027,Limite inferior 80%,635.273,635.2725301884043,3,1
+Franco da Rocha,receita_total,2027,Limite superior 80%,833.511,833.5111656080436,3,1
+Franco da Rocha,receita_total,2028,Receita prevista,724.076,724.0763744344782,3,1
+Franco da Rocha,receita_total,2028,Limite inferior 80%,621.687,621.6873176950355,3,1
+Franco da Rocha,receita_total,2028,Limite superior 80%,876.732,876.7322586729991,3,1
