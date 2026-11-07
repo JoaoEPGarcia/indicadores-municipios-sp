@@ -1,0 +1,46 @@
+/// Valor de cada Indicador por município e ano, só onde a fonte tem dado (indicadores_longo.csv).
+/// Grão: cod_ibge × ano × indicador_id. Nome do município e Faixa de porte saem daqui e ficam em dim_municipio.
+table fato_indicador
+
+	column cod_ibge
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: cod_ibge
+
+	column ano
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: ano
+
+	column indicador_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: indicador_id
+
+	column valor
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: valor
+
+	partition fato_indicador = m
+		mode: import
+		source =
+				let
+					Fonte = LerCsv("indicadores_longo.csv"),
+					Tipos = Table.TransformColumnTypes(
+						Fonte,
+						{{"cod_ibge", Int64.Type}, {"municipio", type text}, {"faixa_porte", type text},
+						 {"ano", Int64.Type}, {"indicador_id", type text}, {"valor", type number}},
+						"en-US"
+					),
+					// atributos do município ficam na dimensão: o fato guarda só chaves e o valor
+					SoChaves = Table.RemoveColumns(Tipos, {"municipio", "faixa_porte"})
+				in
+					SoChaves
+

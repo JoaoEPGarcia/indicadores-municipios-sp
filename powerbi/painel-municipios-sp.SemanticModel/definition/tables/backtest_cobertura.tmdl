@@ -1,0 +1,60 @@
+/// Teste contra o passado: quanto o Intervalo de previsão cobriu em cada origem deixada de fora (backtest_cobertura.csv). Sem relação.
+table backtest_cobertura
+
+	column origem_fora
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: origem_fora
+
+	column grupo
+		dataType: string
+		summarizeBy: none
+		sourceColumn: grupo
+
+	column horizonte
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: horizonte
+
+	/// 80 ou 95: o Intervalo de previsão prometido, em %.
+	column nivel
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: nivel
+
+	column n_teste
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: n_teste
+
+	column cobertura_sem_ajuste
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: cobertura_sem_ajuste
+
+	column cobertura_com_ajuste
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: cobertura_com_ajuste
+
+	partition backtest_cobertura = m
+		mode: import
+		source =
+				let
+					Fonte = LerCsv("backtest_cobertura.csv"),
+					Tipos = Table.TransformColumnTypes(
+						Fonte,
+						{{"origem_fora", Int64.Type}, {"grupo", type text}, {"horizonte", Int64.Type}, {"nivel", Int64.Type},
+						 {"n_teste", Int64.Type}, {"cobertura_sem_ajuste", type number}, {"cobertura_com_ajuste", type number}},
+						"en-US"
+					)
+				in
+					Tipos
+

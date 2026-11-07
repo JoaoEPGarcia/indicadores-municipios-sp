@@ -1,0 +1,28 @@
+relationship fato_indicador_municipio
+	fromColumn: fato_indicador.cod_ibge
+	toColumn: dim_municipio.cod_ibge
+
+relationship fato_indicador_indicador
+	fromColumn: fato_indicador.indicador_id
+	toColumn: dim_indicador.indicador_id
+
+relationship fato_indicador_ano
+	fromColumn: fato_indicador.ano
+	toColumn: dim_ano.ano
+
+relationship ref_faixa_indicador
+	fromColumn: ref_faixa.indicador_id
+	toColumn: dim_indicador.indicador_id
+
+relationship ref_faixa_ano
+	fromColumn: ref_faixa.ano
+	toColumn: dim_ano.ano
+
+relationship previsao_municipio
+	fromColumn: previsao.cod_ibge
+	toColumn: dim_municipio.cod_ibge
+
+relationship previsao_ano
+	fromColumn: previsao.ano
+	toColumn: dim_ano.ano
+

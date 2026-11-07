@@ -1,0 +1,36 @@
+/// Cópia solta da lista de municípios, só para a segmentação da página "Comparação na faixa".
+/// Sem relação de propósito: a dispersão precisa mostrar todos os Municípios parecidos, e não só o escolhido,
+/// e as medidas "do escolhido" leem esta tabela e a levam a dim_municipio com TREATAS.
+table sel_municipio
+
+	column cod_ibge
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [cod_ibge]
+
+	column municipio
+		dataType: string
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [municipio]
+
+	column faixa_porte
+		dataType: string
+		isHidden
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [faixa_porte]
+
+	partition sel_municipio = calculated
+		mode: import
+		source =
+				SELECTCOLUMNS (
+					dim_municipio,
+					"cod_ibge", dim_municipio[cod_ibge],
+					"municipio", dim_municipio[municipio],
+					"faixa_porte", dim_municipio[faixa_porte]
+				)
+

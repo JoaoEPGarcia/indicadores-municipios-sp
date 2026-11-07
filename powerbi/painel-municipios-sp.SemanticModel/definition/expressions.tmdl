@@ -1,0 +1,20 @@
+/// Caminho da pasta dados\tratados\ desta cópia do repositório, terminado em barra invertida.
+/// Troque pelo caminho da sua máquina em Transformar dados → Gerenciar parâmetros.
+expression PastaDados = "C:\Users\Pichau\Desktop\indicadores-municipios-sp\dados\tratados\" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]
+	annotation PBI_ResultType = Text
+
+/// Lê um CSV de dados\tratados\ (UTF-8, vírgula como separador, ponto decimal) e promove o cabeçalho.
+/// Os tipos ficam para cada consulta, sempre com a cultura "en-US": num Windows em português,
+/// sem ela o ponto decimal vira separador de milhar.
+expression LerCsv =
+		(arquivo as text) as table =>
+		let
+			Fonte = Csv.Document(
+				File.Contents(PastaDados & arquivo),
+				[Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]
+			),
+			Cabecalho = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true])
+		in
+			Cabecalho
+	annotation PBI_ResultType = Function
+

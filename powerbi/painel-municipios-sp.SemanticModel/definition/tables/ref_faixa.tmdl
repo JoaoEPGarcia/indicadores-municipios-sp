@@ -1,0 +1,83 @@
+/// Mediana e quartis do Indicador entre os Municípios parecidos (referencia_faixa.csv).
+/// Segunda tabela fato, de grão faixa_porte × ano × indicador_id. Liga-se a dim_ano e a dim_indicador;
+/// a Faixa de porte chega pelas medidas, com TREATAS (docs/adr/0001-ref-faixa-como-segunda-fato.md).
+table ref_faixa
+
+	column faixa_porte
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: faixa_porte
+
+	column ano
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: ano
+
+	column indicador_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: indicador_id
+
+	/// Municípios da faixa com dado naquele ano e Indicador.
+	column n
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: n
+
+	column minimo
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: minimo
+
+	column maximo
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: maximo
+
+	column media
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: media
+
+	column p25
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: p25
+
+	column mediana
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: mediana
+
+	column p75
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: p75
+
+	partition ref_faixa = m
+		mode: import
+		source =
+				let
+					Fonte = LerCsv("referencia_faixa.csv"),
+					Tipos = Table.TransformColumnTypes(
+						Fonte,
+						{{"faixa_porte", type text}, {"ano", Int64.Type}, {"indicador_id", type text}, {"n", Int64.Type},
+						 {"minimo", type number}, {"maximo", type number}, {"media", type number},
+						 {"p25", type number}, {"mediana", type number}, {"p75", type number}},
+						"en-US"
+					)
+				in
+					Tipos
+

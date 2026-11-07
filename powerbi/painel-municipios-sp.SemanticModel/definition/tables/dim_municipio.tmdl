@@ -1,0 +1,51 @@
+/// Uma linha por município de SP (645), com a Faixa de porte do Censo 2022.
+table dim_municipio
+
+	column cod_ibge
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: cod_ibge
+
+	column municipio
+		dataType: string
+		summarizeBy: none
+		sourceColumn: municipio
+
+	column regiao_imediata
+		dataType: string
+		summarizeBy: none
+		sourceColumn: regiao_imediata
+
+	column regiao_intermediaria
+		dataType: string
+		summarizeBy: none
+		sourceColumn: regiao_intermediaria
+
+	column populacao_censo_2022
+		dataType: int64
+		formatString: #,0
+		summarizeBy: none
+		sourceColumn: populacao_censo_2022
+
+	/// Uma das sete faixas de população do Censo 2022. O prefixo numérico ("1. ", "2. "...) ordena as faixas.
+	column faixa_porte
+		dataType: string
+		summarizeBy: none
+		sourceColumn: faixa_porte
+
+	partition dim_municipio = m
+		mode: import
+		source =
+				let
+					Fonte = LerCsv("dim_municipio.csv"),
+					Tipos = Table.TransformColumnTypes(
+						Fonte,
+						{{"cod_ibge", Int64.Type}, {"municipio", type text}, {"regiao_imediata", type text},
+						 {"regiao_intermediaria", type text}, {"populacao_censo_2022", Int64.Type}, {"faixa_porte", type text}},
+						"en-US"
+					)
+				in
+					Tipos
+

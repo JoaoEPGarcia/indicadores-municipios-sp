@@ -1,0 +1,345 @@
+/// Todas as medidas do painel. Os valores que cada uma tem de devolver estão em powerbi/conferencia.md,
+/// e scripts/conferir_powerbi.py os confere contra o modelo aberto no Power BI Desktop.
+table Medidas
+
+	/// Nome do município filtrado; o texto de aviso aparece quando nenhum ou mais de um está escolhido.
+	measure 'Município selecionado' = SELECTEDVALUE ( dim_municipio[municipio], "Escolha um município" )
+		displayFolder: 1. Base
+
+	measure 'Indicador selecionado' = SELECTEDVALUE ( dim_indicador[nome], "Escolha um indicador" )
+		displayFolder: 1. Base
+
+	/// Em um município, um ano e um Indicador há uma linha só, e o valor é o da fonte.
+	/// Em qualquer nível acima é a média simples das linhas, que nenhum visual do painel usa.
+	measure Valor = AVERAGE ( fato_indicador[valor] )
+		formatString: #,0.0
+		displayFolder: 1. Base
+
+	measure 'Faixa de porte' = SELECTEDVALUE ( dim_municipio[faixa_porte] )
+		displayFolder: 1. Base
+
+	/// Municípios de SP na mesma Faixa de porte, com ou sem dado.
+	measure 'Municípios na faixa' =
+			VAR faixa = SELECTEDVALUE ( dim_municipio[faixa_porte] )
+			RETURN
+				IF (
+					NOT ISBLANK ( faixa ),
+					CALCULATE (
+						COUNTROWS ( dim_municipio ),
+						REMOVEFILTERS ( dim_municipio ),
+						dim_municipio[faixa_porte] = faixa
+					)
+				)
+		formatString: #,0
+		displayFolder: 1. Base
+
+	measure 'População (Censo 2022)' = SELECTEDVALUE ( dim_municipio[populacao_censo_2022] )
+		formatString: #,0
+		displayFolder: 1. Base
+
+	/// O Valor como texto, com as casas decimais do Indicador e "sem dado" onde a fonte não tem valor.
+	measure 'Valor formatado' =
+			VAR v = [Valor]
+			VAR casas = SELECTEDVALUE ( dim_indicador[casas], 0 )
+			RETURN
+				IF ( ISBLANK ( v ), "sem dado", FORMAT ( v, IF ( casas = 0, "#,0", "#,0.0" ) ) )
+		displayFolder: 1. Base
+
+	/// Mediana do Indicador entre os Municípios parecidos com dado, no ano do contexto.
+	/// Vazia quando o contexto tem mais de um ano, de um Indicador ou de uma Faixa de porte.
+	measure 'Mediana da faixa' =
+			IF (
+				HASONEVALUE ( dim_municipio[faixa_porte] )
+					&& HASONEVALUE ( dim_ano[ano] )
+					&& HASONEVALUE ( dim_indicador[indicador_id] ),
+				CALCULATE (
+					MAX ( ref_faixa[mediana] ),
+					TREATAS ( VALUES ( dim_municipio[faixa_porte] ), ref_faixa[faixa_porte] )
+				)
+			)
+		formatString: #,0.0
+		displayFolder: 2. Faixa
+
+	measure '1º quartil da faixa' =
+			IF (
+				HASONEVALUE ( dim_municipio[faixa_porte] )
+					&& HASONEVALUE ( dim_ano[ano] )
+					&& HASONEVALUE ( dim_indicador[indicador_id] ),
+				CALCULATE (
+					MAX ( ref_faixa[p25] ),
+					TREATAS ( VALUES ( dim_municipio[faixa_porte] ), ref_faixa[faixa_porte] )
+				)
+			)
+		formatString: #,0.0
+		displayFolder: 2. Faixa
+
+	measure '3º quartil da faixa' =
+			IF (
+				HASONEVALUE ( dim_municipio[faixa_porte] )
+					&& HASONEVALUE ( dim_ano[ano] )
+					&& HASONEVALUE ( dim_indicador[indicador_id] ),
+				CALCULATE (
+					MAX ( ref_faixa[p75] ),
+					TREATAS ( VALUES ( dim_municipio[faixa_porte] ), ref_faixa[faixa_porte] )
+				)
+			)
+		formatString: #,0.0
+		displayFolder: 2. Faixa
+
+	/// Quantos Municípios parecidos têm dado naquele ano e Indicador: o tamanho do grupo da mediana.
+	measure 'Municípios com dado na faixa' =
+			IF (
+				HASONEVALUE ( dim_municipio[faixa_porte] )
+					&& HASONEVALUE ( dim_ano[ano] )
+					&& HASONEVALUE ( dim_indicador[indicador_id] ),
+				CALCULATE (
+					MAX ( ref_faixa[n] ),
+					TREATAS ( VALUES ( dim_municipio[faixa_porte] ), ref_faixa[faixa_porte] )
+				)
+			)
+		formatString: #,0
+		displayFolder: 2. Faixa
+
+	/// (Valor − mediana) ÷ mediana. Sem cor de bom ou ruim: acima da mediana não é, por si, melhor.
+	measure 'Diferença para a mediana' =
+			VAR v = [Valor]
+			VAR m = [Mediana da faixa]
+			RETURN
+				IF ( NOT ISBLANK ( v ) && NOT ISBLANK ( m ), DIVIDE ( v - m, m ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 2. Faixa
+
+	/// Fração dos outros Municípios parecidos com valor menor: 0 = menor valor da faixa, 1 = maior.
+	/// Mesma conta do PERCENT_RANK do SQL (municípios com valor menor ÷ (n − 1)). É uma posição, e não uma nota.
+	measure 'Posição na faixa' =
+			VAR v = [Valor]
+			VAR faixa = SELECTEDVALUE ( dim_municipio[faixa_porte] )
+			VAR grupo =
+				CALCULATETABLE (
+					fato_indicador,
+					REMOVEFILTERS ( dim_municipio ),
+					dim_municipio[faixa_porte] = faixa
+				)
+			VAR n = COUNTROWS ( grupo )
+			VAR menores = COUNTROWS ( FILTER ( grupo, fato_indicador[valor] < v ) )
+			RETURN
+				IF (
+					NOT ISBLANK ( v ) && NOT ISBLANK ( faixa )
+						&& HASONEVALUE ( dim_ano[ano] )
+						&& HASONEVALUE ( dim_indicador[indicador_id] )
+						&& n > 1,
+					DIVIDE ( menores, n - 1 )
+				)
+		formatString: 0%
+		displayFolder: 2. Faixa
+
+	/// Último ano com dado do município no Indicador do contexto, ignorando o filtro de ano.
+	measure 'Ano do último valor' = CALCULATE ( MAX ( fato_indicador[ano] ), REMOVEFILTERS ( dim_ano ) )
+		formatString: 0
+		displayFolder: 3. Último valor
+
+	measure 'Último valor' =
+			VAR a = [Ano do último valor]
+			RETURN
+				IF ( NOT ISBLANK ( a ), CALCULATE ( [Valor], dim_ano[ano] = a ) )
+		formatString: #,0.0
+		displayFolder: 3. Último valor
+
+	measure 'Primeiro valor' =
+			VAR a = CALCULATE ( MIN ( fato_indicador[ano] ), REMOVEFILTERS ( dim_ano ) )
+			RETURN
+				IF ( NOT ISBLANK ( a ), CALCULATE ( [Valor], dim_ano[ano] = a ) )
+		formatString: #,0.0
+		displayFolder: 3. Último valor
+
+	measure 'Variação do período' = DIVIDE ( [Último valor] - [Primeiro valor], [Primeiro valor] )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 3. Último valor
+
+	/// Mediana da faixa no mesmo ano do Último valor do município.
+	measure 'Último valor da faixa' =
+			VAR a = [Ano do último valor]
+			RETURN
+				IF ( NOT ISBLANK ( a ), CALCULATE ( [Mediana da faixa], dim_ano[ano] = a ) )
+		formatString: #,0.0
+		displayFolder: 3. Último valor
+
+	/// Receita corrente total observada, em R$ milhões a preços de 2025.
+	measure 'Receita observada' = CALCULATE ( [Valor], dim_indicador[indicador_id] = "receita_total" )
+		formatString: #,0.0
+		displayFolder: 4. Previsão
+
+	/// Último ano observado: o ano anterior ao primeiro ano previsto. É onde as linhas da previsão se ancoram.
+	measure 'Ano de partida da previsão' =
+			CALCULATE (
+				MIN ( previsao[ano] ),
+				REMOVEFILTERS ( previsao ),
+				REMOVEFILTERS ( dim_ano ),
+				REMOVEFILTERS ( dim_municipio )
+			) - 1
+		formatString: 0
+		displayFolder: 4. Previsão
+
+	measure 'Último ano da previsão' =
+			CALCULATE (
+				MAX ( previsao[ano] ),
+				REMOVEFILTERS ( previsao ),
+				REMOVEFILTERS ( dim_ano ),
+				REMOVEFILTERS ( dim_municipio )
+			)
+		formatString: 0
+		displayFolder: 4. Previsão
+
+	measure 'Receita prevista' = AVERAGE ( previsao[previsto] )
+		formatString: #,0.0
+		displayFolder: 4. Previsão
+
+	/// A Receita prevista com o ano de partida preenchido pelo valor observado, para a linha tracejada sair do ponto real.
+	measure 'Receita prevista (linha)' =
+			IF (
+				SELECTEDVALUE ( dim_ano[ano] ) = [Ano de partida da previsão],
+				[Receita observada],
+				[Receita prevista]
+			)
+		formatString: #,0.0
+		displayFolder: 4. Previsão
+
+	measure 'Limite inferior 80%' =
+			IF (
+				SELECTEDVALUE ( dim_ano[ano] ) = [Ano de partida da previsão],
+				[Receita observada],
+				AVERAGE ( previsao[inferior_80] )
+			)
+		formatString: #,0.0
+		displayFolder: 4. Previsão
+
+	measure 'Limite superior 80%' =
+			IF (
+				SELECTEDVALUE ( dim_ano[ano] ) = [Ano de partida da previsão],
+				[Receita observada],
+				AVERAGE ( previsao[superior_80] )
+			)
+		formatString: #,0.0
+		displayFolder: 4. Previsão
+
+	measure 'Limite inferior 95%' =
+			IF (
+				SELECTEDVALUE ( dim_ano[ano] ) = [Ano de partida da previsão],
+				[Receita observada],
+				AVERAGE ( previsao[inferior_95] )
+			)
+		formatString: #,0.0
+		displayFolder: 4. Previsão
+
+	measure 'Limite superior 95%' =
+			IF (
+				SELECTEDVALUE ( dim_ano[ano] ) = [Ano de partida da previsão],
+				[Receita observada],
+				AVERAGE ( previsao[superior_95] )
+			)
+		formatString: #,0.0
+		displayFolder: 4. Previsão
+
+	measure 'Receita prevista no último ano' =
+			VAR a = [Último ano da previsão]
+			RETURN
+				CALCULATE ( AVERAGE ( previsao[previsto] ), dim_ano[ano] = a )
+		formatString: #,0.0
+		displayFolder: 4. Previsão
+
+	/// A frase da página de previsão. Fala em "intervalo do teste contra o passado", e não em "80% de chance".
+	measure 'Texto da previsão' =
+			VAR m = [Município selecionado]
+			VAR a = [Último ano da previsão]
+			VAR base = [Ano de partida da previsão]
+			VAR p = CALCULATE ( AVERAGE ( previsao[previsto] ), dim_ano[ano] = a )
+			VAR lo8 = CALCULATE ( AVERAGE ( previsao[inferior_80] ), dim_ano[ano] = a )
+			VAR hi8 = CALCULATE ( AVERAGE ( previsao[superior_80] ), dim_ano[ano] = a )
+			VAR lo9 = CALCULATE ( AVERAGE ( previsao[inferior_95] ), dim_ano[ano] = a )
+			VAR hi9 = CALCULATE ( AVERAGE ( previsao[superior_95] ), dim_ano[ano] = a )
+			RETURN
+				IF (
+					ISBLANK ( p ),
+					"Este município não tem os anos recentes de receita válidos: sem previsão.",
+					"Em " & a & ", a receita corrente de " & m & " fica perto de R$ " & FORMAT ( p, "#,0.0" )
+						& " milhões (a preços de " & base & "). No intervalo de 80% do teste contra o passado, entre R$ "
+						& FORMAT ( lo8, "#,0.0" ) & " e R$ " & FORMAT ( hi8, "#,0.0" )
+						& " milhões; no de 95%, entre R$ " & FORMAT ( lo9, "#,0.0" ) & " e R$ " & FORMAT ( hi9, "#,0.0" )
+						& " milhões."
+				)
+		displayFolder: 4. Previsão
+
+	/// 1 para os municípios da mesma Faixa de porte que o escolhido em sel_municipio. Filtro da dispersão ("é 1").
+	measure 'Na faixa do escolhido' =
+			IF ( SELECTEDVALUE ( dim_municipio[faixa_porte] ) = SELECTEDVALUE ( sel_municipio[faixa_porte] ), 1, 0 )
+		formatString: 0
+		displayFolder: 5. Comparação na faixa
+
+	/// 1 só para o município escolhido em sel_municipio. Regra de cor do ponto em destaque.
+	measure 'É o escolhido' =
+			IF ( SELECTEDVALUE ( dim_municipio[cod_ibge] ) = SELECTEDVALUE ( sel_municipio[cod_ibge] ), 1, 0 )
+		formatString: 0
+		displayFolder: 5. Comparação na faixa
+
+	measure 'Valor do escolhido' =
+			CALCULATE ( [Valor], TREATAS ( VALUES ( sel_municipio[cod_ibge] ), dim_municipio[cod_ibge] ) )
+		formatString: #,0.0
+		displayFolder: 5. Comparação na faixa
+
+	measure 'Mediana da faixa do escolhido' =
+			CALCULATE ( [Mediana da faixa], TREATAS ( VALUES ( sel_municipio[cod_ibge] ), dim_municipio[cod_ibge] ) )
+		formatString: #,0.0
+		displayFolder: 5. Comparação na faixa
+
+	measure 'Diferença do escolhido' =
+			CALCULATE ( [Diferença para a mediana], TREATAS ( VALUES ( sel_municipio[cod_ibge] ), dim_municipio[cod_ibge] ) )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: 5. Comparação na faixa
+
+	measure 'Posição do escolhido' =
+			CALCULATE ( [Posição na faixa], TREATAS ( VALUES ( sel_municipio[cod_ibge] ), dim_municipio[cod_ibge] ) )
+		formatString: 0%
+		displayFolder: 5. Comparação na faixa
+
+	measure 'Título da evolução' =
+			[Indicador selecionado] & ": " & [Município selecionado] & " e a mediana de " & [Municípios na faixa]
+				& " municípios da faixa " & LOWER ( MID ( [Faixa de porte], 4, 40 ) ) & " habitantes"
+		displayFolder: 6. Títulos
+
+	/// Erro médio absoluto do método, em fração (0,066 = 6,6%).
+	measure 'Erro médio absoluto' = DIVIDE ( AVERAGE ( backtest_metodos[erro_medio_abs_pct] ), 100 )
+		formatString: 0.0%
+		displayFolder: 7. Teste contra o passado
+
+	/// Cobertura do Intervalo de previsão antes do alargamento, média ponderada pelo número de previsões testadas.
+	measure 'Cobertura sem ajuste' =
+			DIVIDE (
+				SUMX ( backtest_cobertura, backtest_cobertura[cobertura_sem_ajuste] * backtest_cobertura[n_teste] ),
+				SUM ( backtest_cobertura[n_teste] ) * 100
+			)
+		formatString: 0%
+		displayFolder: 7. Teste contra o passado
+
+	/// Cobertura do Intervalo de previsão depois do alargamento, média ponderada pelo número de previsões testadas.
+	measure 'Cobertura com ajuste' =
+			DIVIDE (
+				SUMX ( backtest_cobertura, backtest_cobertura[cobertura_com_ajuste] * backtest_cobertura[n_teste] ),
+				SUM ( backtest_cobertura[n_teste] ) * 100
+			)
+		formatString: 0%
+		displayFolder: 7. Teste contra o passado
+
+	column oculta
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: oculta
+
+	partition Medidas = m
+		mode: import
+		source =
+				let
+					Vazia = #table(type table [oculta = text], {})
+				in
+					Vazia
+

@@ -1,0 +1,75 @@
+/// Uma linha por Indicador (8), com a definição escrita: fórmula, fonte, periodicidade e meta.
+table dim_indicador
+
+	column indicador_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: indicador_id
+
+	column nome
+		dataType: string
+		summarizeBy: none
+		sourceColumn: nome
+		sortByColumn: ordem
+
+	column unidade
+		dataType: string
+		summarizeBy: none
+		sourceColumn: unidade
+
+	column formula
+		dataType: string
+		summarizeBy: none
+		sourceColumn: formula
+
+	column fonte
+		dataType: string
+		summarizeBy: none
+		sourceColumn: fonte
+
+	column periodicidade
+		dataType: string
+		summarizeBy: none
+		sourceColumn: periodicidade
+
+	column meta
+		dataType: string
+		summarizeBy: none
+		sourceColumn: meta
+
+	column sentido
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sentido
+
+	column casas
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: casas
+
+	column ordem
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: ordem
+
+	partition dim_indicador = m
+		mode: import
+		source =
+				let
+					Fonte = LerCsv("dim_indicador.csv"),
+					Tipos = Table.TransformColumnTypes(
+						Fonte,
+						{{"indicador_id", type text}, {"nome", type text}, {"unidade", type text}, {"formula", type text},
+						 {"fonte", type text}, {"periodicidade", type text}, {"meta", type text}, {"sentido", type text},
+						 {"casas", Int64.Type}, {"ordem", Int64.Type}},
+						"en-US"
+					)
+				in
+					Tipos
+

@@ -1,0 +1,76 @@
+/// Previsão da receita corrente total, em R$ milhões a preços de 2025, com os Intervalos de previsão de 80% e 95%.
+/// Grão: cod_ibge × ano (previsao_receita_total.csv).
+table previsao
+
+	column cod_ibge
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: cod_ibge
+
+	/// Grupo de porte (A, B, C) usado para calibrar o erro. Não é a Faixa de porte.
+	column grupo_porte
+		dataType: string
+		summarizeBy: none
+		sourceColumn: grupo_porte
+
+	column ano
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: ano
+
+	column metodo
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: metodo
+
+	column previsto
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: previsto
+
+	column inferior_80
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: inferior_80
+
+	column superior_80
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: superior_80
+
+	column inferior_95
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: inferior_95
+
+	column superior_95
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: superior_95
+
+	partition previsao = m
+		mode: import
+		source =
+				let
+					Fonte = LerCsv("previsao_receita_total.csv"),
+					Tipos = Table.TransformColumnTypes(
+						Fonte,
+						{{"cod_ibge", Int64.Type}, {"municipio", type text}, {"grupo_porte", type text}, {"ano", Int64.Type},
+						 {"metodo", type text}, {"previsto", type number}, {"inferior_80", type number}, {"superior_80", type number},
+						 {"inferior_95", type number}, {"superior_95", type number}},
+						"en-US"
+					),
+					SemNome = Table.RemoveColumns(Tipos, {"municipio"})
+				in
+					SemNome
+

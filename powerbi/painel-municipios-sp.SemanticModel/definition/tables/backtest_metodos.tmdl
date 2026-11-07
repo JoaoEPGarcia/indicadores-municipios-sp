@@ -1,0 +1,77 @@
+/// Teste contra o passado: erro de cada método de previsão por horizonte (backtest_metodos.csv). Sem relação.
+table backtest_metodos
+
+	column metodo
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: metodo
+
+	column metodo_nome
+		dataType: string
+		summarizeBy: none
+		sourceColumn: metodo_nome
+
+	column horizonte
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: horizonte
+
+	column n
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: n
+
+	column erro_medio_abs_pct
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: erro_medio_abs_pct
+
+	column erro_mediano_abs_pct
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: erro_mediano_abs_pct
+
+	column vies_pct
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: vies_pct
+
+	/// 1 para o método que a previsão usa.
+	column escolhido
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: escolhido
+
+	partition backtest_metodos = m
+		mode: import
+		source =
+				let
+					Fonte = LerCsv("backtest_metodos.csv"),
+					Tipos = Table.TransformColumnTypes(
+						Fonte,
+						{{"metodo", type text}, {"horizonte", Int64.Type}, {"n", Int64.Type}, {"erro_medio_abs_pct", type number},
+						 {"erro_mediano_abs_pct", type number}, {"vies_pct", type number}, {"escolhido", Int64.Type}},
+						"en-US"
+					),
+					// os nomes que o README e o relatório usam para cada método
+					Nomes = Table.AddColumn(
+						Tipos,
+						"metodo_nome",
+						each
+							if [metodo] = "ingenuo" then "Repetir o último valor"
+							else if [metodo] = "tendencia3" then "Tendência dos 3 últimos anos"
+							else if [metodo] = "tendencia5" then "Reta dos 5 últimos anos"
+							else [metodo],
+						type text
+					)
+				in
+					Nomes
+
