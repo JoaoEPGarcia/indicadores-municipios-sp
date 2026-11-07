@@ -331,7 +331,27 @@ def erros_do_log(log, pasta, raiz):
     return erros
 
 
-def conferir_compilacao(v, raiz, limite):
+# Referência e citação quebradas ("sem referência quebrada", ticket 07), no log da última passada.
+REFERENCIA_QUEBRADA = re.compile(r"LaTeX Warning: (Reference|Citation) `([^']+)' on page \S+ undefined"
+                                 r"(?: on input line (\d+))?")
+
+
+def referencias_quebradas(log, textos):
+    """(onde, mensagem) de cada \\ref e \\cite sem destino. onde: o \\ref no fonte, procurado nos .tex do
+    relatório (o aviso do log só dá a linha, sem o arquivo)."""
+    quebradas = []
+    for tipo, nome, linha_log in dict.fromkeys(REFERENCIA_QUEBRADA.findall(log)):
+        uso = re.compile(r'\\[A-Za-z]*(?:ref|cite)[A-Za-z]*\*?(?:\[[^\]]*\])*\{[^}]*(?<![^{,\s])'
+                         + re.escape(nome) + r'(?![^},\s])')
+        lugares = [f'{caminho}:{n}' for caminho, texto in textos.items()
+                   for n, linha in enumerate(texto.splitlines(), start=1) if uso.search(linha)]
+        o_que = 'referência' if tipo == 'Reference' else 'citação'
+        for onde in lugares or [f'{RELATORIO_TEX}:{linha_log or "?"}']:
+            quebradas.append((onde, f'{o_que} "{nome}" sem destino'))
+    return list(dict.fromkeys(quebradas))
+
+
+def conferir_compilacao(v, raiz, limite, textos):
     """Compila relatorio/relatorio.tex em duas passadas, como o kit manda. Os arquivos auxiliares ficam
     numa pasta temporária; o PDF vai para relatorio/relatorio.pdf. limite: segundos por passada."""
     nome = f'{RELATORIO_TEX} compila em pdfLaTeX, duas passadas, sem erro'
@@ -356,6 +376,10 @@ def conferir_compilacao(v, raiz, limite):
                 erros = erros or [(RELATORIO_TEX, f'pdflatex saiu com código {r.returncode}')]
                 v.falha(nome, [f'{onde}: {erro} (passada {passada})' for onde, erro in erros])
                 return
+        quebradas = referencias_quebradas(log, textos)
+        if quebradas:
+            v.falha(nome, [f'{onde}: {erro} (depois da passada 2)' for onde, erro in quebradas])
+            return
         shutil.copyfile(Path(saida, 'relatorio.pdf'), raiz / RELATORIO_PDF)
     v.ok(nome)
 
@@ -416,7 +440,9 @@ def verificar(raiz, limite_pdflatex=600):
         conferir_texto_final(v, README, [(f'{README}:{i}', t) for i, t in enumerate(linhas, start=1)],
                              publicacao=False)
     if (raiz / RELATORIO_TEX).exists():
-        conferir_compilacao(v, raiz, limite_pdflatex)
+        tex = {p.relative_to(raiz).as_posix(): p.read_text(encoding='utf-8')
+               for p in sorted((raiz / 'relatorio').rglob('*.tex'))}
+        conferir_compilacao(v, raiz, limite_pdflatex, tex)
     else:
         v.pulada('compilação do relatório', f'{RELATORIO_TEX} ainda não existe')
     if (raiz / RELATORIO_PDF).exists():

@@ -355,6 +355,26 @@ class TesteCompilacao(unittest.TestCase):
         self.assertIn('relatorio/secoes/base.tex:2', saida)
         self.assertIn('Undefined control sequence', saida)
 
+    def test_referencia_quebrada_falha_apontando_onde_esta(self):
+        self.repo.escrever('relatorio/relatorio.tex', r'''
+            \documentclass{article}
+            \input{numeros.tex}
+            \begin{document}
+            \section{A base}\label{sec:base}
+            São \NumMunicipios{} municípios (Seção~\ref{sec:base}).
+            \input{secoes/fim}
+            \end{document}
+        ''')
+        self.repo.escrever('relatorio/secoes/fim.tex', r'''
+            Ver a Seção~\ref{sec:inexistente} e \cite{autor}.
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('relatorio/secoes/fim.tex:1', saida)
+        self.assertIn('sec:inexistente', saida)
+        self.assertIn('autor', saida)
+        self.assertNotIn('sec:base', saida)
+
     def test_compilacao_que_passa_do_limite_de_tempo_falha_sem_traceback(self):
         self.repo.escrever('relatorio/relatorio.tex', r'''
             \documentclass{article}
