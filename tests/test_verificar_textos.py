@@ -234,6 +234,24 @@ class TesteVerificador(unittest.TestCase):
         codigo, saida = self.repo.verificar()
         self.assertEqual(codigo, 0, saida)
 
+    def test_negacao_so_vale_quando_rege_a_publicacao(self):
+        afirmam = [
+            'Não é difícil: o painel foi publicado na web.',
+            'O painel não usa DAX complexo; foi publicado na web.',
+            'Nada de DAX complexo.\nO painel foi publicado na web.',
+        ]
+        negam = [
+            'O painel não foi publicado na web.',
+            'Nada diz que o painel foi publicado na web.',
+            'O painel fica no Desktop, nem publicado na web nem no Service.',
+            'O painel não foi\npublicado na web.',
+        ]
+        for frase, codigo_esperado in [(f, 1) for f in afirmam] + [(f, 0) for f in negam]:
+            with self.subTest(frase=frase):
+                self.repo.escrever('GLOSSARY.md', '# Glossário\n\n' + frase + '\n', versionar=True)
+                codigo, saida = self.repo.verificar()
+                self.assertEqual(codigo, codigo_esperado, saida)
+
     def test_sem_pdflatex_no_path_a_compilacao_falha_sem_traceback(self):
         self.repo.escrever('relatorio/relatorio.tex', RELATORIO_MINIMO)
         so_o_git = os.path.dirname(shutil.which('git'))

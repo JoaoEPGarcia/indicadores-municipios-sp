@@ -220,9 +220,22 @@ PUBLICACAO = re.compile('|'.join([
     r'published\s+(?:on|to)\s+(?:the\s+)?(?:internet|Power\s+BI\s+Service)',
     r'app\.powerbi\.com/view',              # link de "Publicar na Web"
 ]), re.I)
-# Frase que nega ("o painel não foi publicado na web") não afirma a publicação.
+# Frase que nega ("o painel não foi publicado na web") não afirma a publicação. A negação só conta
+# quando rege a afirmação: na mesma oração e a poucas palavras antes dela ("nada diz que o painel foi
+# publicado", "nem publicado"). Um "não" de outra oração ("Não é difícil: o painel foi publicado")
+# ou de outra linha da lista não vale.
 NEGACAO = re.compile(r'\b(?:não|nunca|nada|nem|jamais|not|never|nothing)\b', re.I)
+FIM_DE_ORACAO = re.compile(r'[.;:!?,()—]|\n\s*\n|\n\s*(?:[-*+>#|]|\d+[.)])')
+ALCANCE_DA_NEGACAO = 6  # palavras antes da afirmação
 EXTENSOES_DE_TEXTO = ('.md', '.tex', '.txt')
+
+
+def negada(texto, inicio):
+    """A afirmação que começa em inicio vem negada na própria oração?"""
+    antes = texto[max(0, inicio - 300):inicio]
+    fins = list(FIM_DE_ORACAO.finditer(antes))
+    oracao = antes[fins[-1].end():] if fins else antes
+    return bool(NEGACAO.search(' '.join(oracao.split()[-ALCANCE_DA_NEGACAO:])))
 
 
 def frases_de_publicacao(texto):
@@ -230,8 +243,7 @@ def frases_de_publicacao(texto):
     achados = []
     linhas = texto.splitlines()
     for m in PUBLICACAO.finditer(texto):
-        inicio = max(texto.rfind(c, 0, m.start()) for c in ('. ', '! ', '? ', '\n\n'))
-        if NEGACAO.search(texto, max(inicio, 0), m.start()):
+        if negada(texto, m.start()):
             continue
         n = linha_de(texto, m.start())
         achados.append((n, linhas[n - 1].strip()))
