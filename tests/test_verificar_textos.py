@@ -31,6 +31,15 @@ REGISTRO = textwrap.dedent(r'''
     \newcommand{\NumCelulasBatem}{PENDENTE}
 ''').lstrip()
 
+# O menor relatório que compila: só uma macro do registro.
+RELATORIO_MINIMO = r'''
+    \documentclass{article}
+    \input{numeros.tex}
+    \begin{document}
+    São \NumMunicipios{} municípios.
+    \end{document}
+'''
+
 
 class Repositorio:
     """Um repositório de brinquedo, com git, numa pasta temporária."""
@@ -215,6 +224,25 @@ class TesteVerificador(unittest.TestCase):
         codigo, saida = self.repo.verificar()
         self.assertEqual(codigo, 0, saida)
 
+    def test_sem_pdflatex_no_path_a_compilacao_falha_sem_traceback(self):
+        self.repo.escrever('relatorio/relatorio.tex', RELATORIO_MINIMO)
+        so_o_git = os.path.dirname(shutil.which('git'))
+        codigo, saida = self.repo.verificar(env={'PATH': so_o_git})
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('[FALHA] relatorio/relatorio.tex compila', saida)
+        self.assertIn('pdflatex', saida)
+        self.assertNotIn('Traceback', saida)
+
+    def test_sem_pymupdf_o_texto_do_pdf_falha_sem_traceback(self):
+        self.repo.escrever('relatorio/relatorio.pdf', '%PDF-1.4 de um build antigo')
+        with tempfile.TemporaryDirectory() as sem_pymupdf:
+            Path(sem_pymupdf, 'pymupdf.py').write_text("raise ImportError('pymupdf ausente')", encoding='utf-8')
+            codigo, saida = self.repo.verificar(env={'PYTHONPATH': sem_pymupdf})
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('[FALHA] relatorio/relatorio.pdf', saida)
+        self.assertIn('pymupdf', saida)
+        self.assertNotIn('Traceback', saida)
+
 
 @unittest.skipUnless(shutil.which('pdflatex'), 'pdflatex não está no PATH')
 class TesteCompilacao(unittest.TestCase):
@@ -250,6 +278,19 @@ class TesteCompilacao(unittest.TestCase):
         self.assertEqual(codigo, 1, saida)
         self.assertIn('relatorio/relatorio.tex:4', saida)
         self.assertIn('Undefined control sequence', saida)
+
+    def test_compilacao_que_passa_do_limite_de_tempo_falha_sem_traceback(self):
+        self.repo.escrever('relatorio/relatorio.tex', r'''
+            \documentclass{article}
+            \def\laco{\laco}
+            \begin{document}
+            \laco
+            \end{document}
+        ''')
+        codigo, saida = self.repo.verificar('--limite-pdflatex', '3')
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('3 s', saida)
+        self.assertNotIn('Traceback', saida)
 
     def test_pdf_que_imprime_pendente_falha(self):
         # Um PENDENTE que escapou para o PDF, por um caminho que não é macro (texto colado de outro lugar).

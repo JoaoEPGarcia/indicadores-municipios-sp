@@ -275,16 +275,24 @@ def erros_do_log(log):
     return erros
 
 
-def conferir_compilacao(v, raiz):
+def conferir_compilacao(v, raiz, limite):
     """Compila relatorio/relatorio.tex em duas passadas, como o kit manda. Os arquivos auxiliares ficam
-    numa pasta temporária; o PDF vai para relatorio/relatorio.pdf."""
+    numa pasta temporária; o PDF vai para relatorio/relatorio.pdf. limite: segundos por passada."""
     nome = f'{RELATORIO_TEX} compila em pdfLaTeX, duas passadas, sem erro'
     pasta = (raiz / RELATORIO_TEX).parent
     with tempfile.TemporaryDirectory() as saida:
         for passada in (1, 2):
-            r = subprocess.run(['pdflatex', '-interaction=nonstopmode', '-halt-on-error',
-                                f'-output-directory={saida}', Path(RELATORIO_TEX).name],
-                               cwd=pasta, capture_output=True, timeout=600)
+            try:
+                r = subprocess.run(['pdflatex', '-interaction=nonstopmode', '-halt-on-error',
+                                    f'-output-directory={saida}', Path(RELATORIO_TEX).name],
+                                   cwd=pasta, capture_output=True, timeout=limite)
+            except FileNotFoundError:
+                v.falha(nome, ['pdflatex não está no PATH: instale o MiKTeX (ou o TeX Live) e abra outro terminal'])
+                return
+            except subprocess.TimeoutExpired:
+                v.falha(nome, [f'pdflatex passou de {limite:g} s na passada {passada} e foi interrompido '
+                               '(laço de macro? Rode pdflatex à mão para ver onde para)'])
+                return
             log = Path(saida, 'relatorio.log')
             log = log.read_text(encoding='utf-8', errors='replace') if log.exists() else r.stdout.decode(errors='replace')
             erros = erros_do_log(log)
@@ -313,14 +321,24 @@ def conferir_texto_final(v, caminho, paginas):
         v.ok(nome)
 
 
-def paginas_do_pdf(raiz):
-    import pymupdf  # só aqui: sem PDF, o verificador roda sem a biblioteca
-    with pymupdf.open(raiz / RELATORIO_PDF) as doc:
-        return [(f'{RELATORIO_PDF}, página {i}', p.get_text()) for i, p in enumerate(doc, start=1)]
+def conferir_pdf(v, raiz):
+    """Lê o texto de cada página do PDF e confere o que o leitor veria."""
+    try:
+        import pymupdf  # só aqui: sem PDF, o verificador roda sem a biblioteca
+    except ImportError:
+        v.falha(f'{RELATORIO_PDF} legível', ['pymupdf não está instalado: pip install -r requirements.txt'])
+        return
+    try:
+        with pymupdf.open(raiz / RELATORIO_PDF) as doc:
+            paginas = [(f'{RELATORIO_PDF}, página {i}', p.get_text()) for i, p in enumerate(doc, start=1)]
+    except Exception as e:  # PDF corrompido ou truncado: o pymupdf tem vários tipos de erro
+        v.falha(f'{RELATORIO_PDF} legível', [f'o pymupdf não abriu o PDF: {e}'])
+        return
+    conferir_texto_final(v, RELATORIO_PDF, paginas)
 
 
 # ── a verificação ───────────────────────────────────────────────────────
-def verificar(raiz):
+def verificar(raiz, limite_pdflatex=600):
     v = Verificacao()
     usos = usos_nas_figuras(raiz)
     if (raiz / MODELO_README).exists():
@@ -339,11 +357,11 @@ def verificar(raiz):
         linhas = (raiz / README).read_text(encoding='utf-8').splitlines()
         conferir_texto_final(v, README, [(f'{README}:{i}', t) for i, t in enumerate(linhas, start=1)])
     if (raiz / RELATORIO_TEX).exists():
-        conferir_compilacao(v, raiz)
+        conferir_compilacao(v, raiz, limite_pdflatex)
     else:
         v.pulada('compilação do relatório', f'{RELATORIO_TEX} ainda não existe')
     if (raiz / RELATORIO_PDF).exists():
-        conferir_texto_final(v, RELATORIO_PDF, paginas_do_pdf(raiz))
+        conferir_pdf(v, raiz)
     else:
         v.pulada('texto do PDF', f'{RELATORIO_PDF} ainda não existe')
     return v
@@ -356,8 +374,10 @@ def main():
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('--raiz', type=Path, default=RAIZ, help='raiz do repositório (padrão: a deste script)')
-    raiz = ap.parse_args().raiz.resolve()
-    v = verificar(raiz)
+    ap.add_argument('--limite-pdflatex', type=float, default=600, metavar='SEGUNDOS',
+                    help='tempo máximo de cada passada do pdfLaTeX (padrão: 600)')
+    args = ap.parse_args()
+    v = verificar(args.raiz.resolve(), args.limite_pdflatex)
     print('\n'.join(v.linhas))
     if v.falhas:
         print(f'\n{v.falhas} problema(s). Os textos não estão prontos.')
