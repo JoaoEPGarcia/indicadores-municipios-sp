@@ -2,11 +2,11 @@
   "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
   "name": "p4_cobertura",
   "position": {
-    "x": 640,
-    "y": 400,
+    "x": 440,
+    "y": 440,
     "z": 4000,
-    "width": 616,
-    "height": 304,
+    "width": 400,
+    "height": 272,
     "tabOrder": 3
   },
   "visual": {
@@ -81,7 +81,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 1,
+                      "ColorId": 3,
                       "Percent": 0.0
                     }
                   }
@@ -97,7 +97,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 0,
+                      "ColorId": 2,
                       "Percent": 0.0
                     }
                   }
@@ -162,7 +162,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 1,
+                      "ColorId": 3,
                       "Percent": 0.0
                     }
                   }
@@ -188,7 +188,7 @@
             "start": {
               "expr": {
                 "Literal": {
-                  "Value": "0.0D"
+                  "Value": "0D"
                 }
               }
             },
@@ -264,6 +264,13 @@
               "expr": {
                 "Literal": {
                   "Value": "'Cobertura do intervalo de 80% por ano deixado de fora'"
+                }
+              }
+            },
+            "titleWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
                 }
               }
             }

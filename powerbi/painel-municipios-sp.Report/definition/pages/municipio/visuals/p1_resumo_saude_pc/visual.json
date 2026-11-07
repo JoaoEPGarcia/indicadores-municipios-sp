@@ -3,10 +3,10 @@
   "name": "p1_resumo_saude_pc",
   "position": {
     "x": 336,
-    "y": 136,
+    "y": 156,
     "z": 9000,
     "width": 296,
-    "height": 112,
+    "height": 104,
     "tabOrder": 8
   },
   "visual": {
@@ -82,7 +82,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "16.0D"
+                  "Value": "16D"
                 }
               }
             }
@@ -131,6 +131,13 @@
               "expr": {
                 "Literal": {
                   "Value": "'Despesa com saúde por habitante'"
+                }
+              }
+            },
+            "titleWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
                 }
               }
             }

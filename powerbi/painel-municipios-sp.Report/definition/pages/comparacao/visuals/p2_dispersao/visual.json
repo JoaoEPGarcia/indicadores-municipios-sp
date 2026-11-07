@@ -98,7 +98,7 @@
                               },
                               "Right": {
                                 "Literal": {
-                                  "Value": "1.0D"
+                                  "Value": "1D"
                                 }
                               }
                             }
@@ -125,7 +125,7 @@
                               },
                               "Right": {
                                 "Literal": {
-                                  "Value": "0.0D"
+                                  "Value": "0D"
                                 }
                               }
                             }
@@ -255,6 +255,13 @@
               "expr": {
                 "Literal": {
                   "Value": "'Os Municípios parecidos no Indicador e no ano escolhidos'"
+                }
+              }
+            },
+            "titleWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
                 }
               }
             }

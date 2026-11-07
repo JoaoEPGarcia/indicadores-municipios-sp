@@ -27,15 +27,41 @@
                 }
               },
               "queryRef": "Medidas.Receita prevista no último ano",
-              "nativeQueryRef": "Receita prevista no último ano, R$ milhões, a preços de 2025",
-              "displayName": "Receita prevista no último ano, R$ milhões, a preços de 2025"
+              "nativeQueryRef": "R$ milhões em 2028, a preços de 2025",
+              "displayName": "R$ milhões em 2028, a preços de 2025"
             }
           ]
         }
       }
     },
     "objects": {
+      "labels": [
+        {
+          "properties": {
+            "labelDisplayUnits": {
+              "expr": {
+                "Literal": {
+                  "Value": "1D"
+                }
+              }
+            }
+          }
+        }
+      ],
       "categoryLabels": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "wordWrap": [
         {
           "properties": {
             "show": {

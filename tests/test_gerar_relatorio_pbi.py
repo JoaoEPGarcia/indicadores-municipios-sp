@@ -196,16 +196,94 @@ class TesteRelatorioGerado(unittest.TestCase):
             self.assertIn(v['visual']['visualType'], ('slicer', 'scatterChart'), chave)
             self.assertNotIn('sortDefinition', v['visual']['query'], chave)
 
+    def tema(self):
+        return ler(self.saida / 'StaticResources' / 'RegisteredResources' / 'tema-portfolio.json')
+
+    def cor(self, no):
+        """A cor que o Desktop desenha. No ThemeDataColor, os ids 0 e 1 são o fundo e a cor de texto do tema,
+        e o id i + 2 é dataColors[i] (a primeira tela do Desktop mostrou isso: id 0 saía branco)."""
+        tema = self.tema()
+        cor = no['solid']['color']['expr']
+        if 'ThemeDataColor' in cor:
+            ident, clarear = cor['ThemeDataColor']['ColorId'], cor['ThemeDataColor']['Percent']
+            base = [tema['background'], tema['foreground'], *tema['dataColors']][ident]
+            return base, clarear
+        return cor['Literal']['Value'].strip("'").upper(), 0
+
+    def cor_da_serie(self, chave, objeto, campo):
+        regras = self.visuais[chave]['visual']['objects'][objeto]
+        regra = next(r for r in regras if r.get('selector', {}).get('metadata') == campo)
+        return self.cor(regra['properties']['fill'])
+
+    def test_municipio_em_vermelho_e_mediana_em_cinza(self):
+        tema = self.tema()
+        self.assertEqual(self.cor_da_serie(('municipio', 'p1_evolucao'), 'dataPoint', 'Medidas.Valor'),
+                         (tema['dataColors'][0], 0))
+        self.assertEqual(self.cor_da_serie(('municipio', 'p1_evolucao'), 'dataPoint', 'Medidas.Mediana da faixa'),
+                         (tema['dataColors'][1], 0))
+        self.assertEqual(self.cor_da_serie(('previsao', 'p3_previsao'), 'dataPoint', 'Medidas.Receita observada'),
+                         (tema['dataColors'][0], 0))
+
     def test_cores_so_do_destaque_e_do_neutro(self):
-        tema = ler(self.saida / 'StaticResources' / 'RegisteredResources' / 'tema-portfolio.json')
+        tema = self.tema()
         permitidas = {tema['dataColors'][0], tema['dataColors'][1], tema['backgroundLight'], tema['foreground']}
         for chave, v in self.visuais.items():
             for no in percorrer(v):
-                if 'ThemeDataColor' in no:
-                    self.assertIn(no['ThemeDataColor']['ColorId'], (0, 1), chave)   # sem azul, verde nem "bom"
+                if 'solid' in no and isinstance(no['solid'], dict) and 'expr' in no['solid'].get('color', {}):
+                    if 'Conditional' not in no['solid']['color']['expr']:
+                        self.assertIn(self.cor(no)[0], permitidas, chave)   # sem azul, verde nem "bom"
                 valor = no.get('Literal', {}).get('Value', '')
                 if re.fullmatch(r"'#[0-9A-Fa-f]{6}'", valor):
                     self.assertIn(valor.strip("'").upper(), permitidas, chave)
+
+    def test_caixas_de_texto_na_fonte_do_tema(self):
+        fontes = {c['fontFace'] for c in self.tema()['textClasses'].values()}
+        achadas = 0
+        for chave, v in self.visuais.items():
+            for no in percorrer(v):
+                if 'textStyle' in no:
+                    self.assertIn(no['textStyle'].get('fontFamily'), fontes, chave)
+                    achadas += 1
+        self.assertGreater(achadas, 8)
+
+    # ── leitura dos números ──
+    def test_cartoes_mostram_o_numero_inteiro(self):
+        # "11.690", e não "12 Mil": unidade de exibição "nenhuma" em todo cartão
+        for chave, v in self.visuais.items():
+            if v['visual']['visualType'] == 'card':
+                rotulos = v['visual']['objects']['labels'][0]['properties']
+                self.assertEqual(rotulos['labelDisplayUnits'], {'expr': {'Literal': {'Value': '1D'}}}, chave)
+
+    def test_tabela_do_municipio_com_as_mesmas_casas_e_sem_total(self):
+        formatos = {}
+        for arq in TMDL.glob('Medidas.tmdl'):
+            atual = None
+            for linha in arq.read_text(encoding='utf-8').splitlines():
+                m = re.match(r"^\tmeasure\s+('(?:[^']|'')+'|[^\s=]+)", linha)
+                if m:
+                    atual = nome_tmdl(m.group(1))
+                m = re.match(r'^\t\tformatString:\s*(.+)$', linha)
+                if m and atual:
+                    formatos[atual] = m.group(1).strip()
+        tabela = self.visuais[('municipio', 'p1_tabela')]['visual']
+        colunas = {p['displayName']: p['field'] for p in tabela['query']['queryState']['Values']['projections']}
+        valor, mediana = colunas['Valor'], colunas['Mediana da faixa']
+        self.assertEqual(formatos.get(valor['Measure']['Property']), formatos[mediana['Measure']['Property']])
+        self.assertEqual(tabela['objects']['total'][0]['properties']['totals'], {'expr': {'Literal': {'Value': 'false'}}})
+
+    def test_tabela_dos_indicadores_cabe_sem_rolagem_lateral(self):
+        v = self.visuais[('como_ler', 'p4_indicadores')]
+        projecoes = v['visual']['query']['queryState']['Values']['projections']
+        larguras = {r['selector']['metadata']: float(r['properties']['value']['expr']['Literal']['Value'].rstrip('D'))
+                    for r in v['visual']['objects']['columnWidth']}
+        self.assertEqual(set(larguras), {p['queryRef'] for p in projecoes})
+        self.assertLessEqual(sum(larguras.values()), v['position']['width'] - 24)
+
+    def test_todo_visual_cabe_na_pagina(self):
+        for chave, v in self.visuais.items():
+            p = v['position']
+            self.assertLessEqual(p['x'] + p['width'], 1280, chave)
+            self.assertLessEqual(p['y'] + p['height'], 720, chave)
 
     def test_tema_do_kit_registrado(self):
         relatorio = ler(self.definicao / 'report.json')
