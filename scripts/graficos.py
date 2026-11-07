@@ -1,282 +1,280 @@
-"""Etapa 5: gráficos em PNG, nas cores de comum.PALETA.
+"""Figuras do projeto, no kit de estilo do portfólio (estilo/estilo_portfolio.py).
 
     python scripts/graficos.py
 
-Regras da skill dataviz seguidas aqui: uma série destacada em azul e o contexto em cinza; linha de
-2 px; marcador de pelo menos 8 px com anel da cor do fundo; grade fina e sem tracejado; legenda
-sempre que há duas séries ou mais; rótulo direto só no que conta; texto sempre em tinta, nunca na
-cor da série; nenhum eixo duplo. A paleta de duas séries (azul e vermelho) passou no validador da
-skill; aqui o segundo tom é o cinza, que é contexto e não identidade.
+Quatro figuras sobre o município de exemplo (sorteado com semente fixa, ver comum.municipio_de_exemplo):
+  01-painel-municipio.png    o exemplo contra a mediana e os quartis da faixa, em quatro Indicadores
+  02-municipio-na-faixa.png  a diferença para a mediana nos sete Indicadores, sobre a distribuição da faixa
+  03-previsao.png            a Previsão da receita com os dois Intervalos de previsão
+  04-teste-do-modelo.png     o Teste contra o passado: erro dos métodos e cobertura do intervalo
+
+Regras do kit: o título afirma o achado e todo número dele vem de scripts/numeros.py; o Município
+selecionado sai no vermelho de destaque e o contexto em neutro; a distribuição sai em azul; rótulo direto
+em vez de legenda; fonte no rodapé. Os números usados em cada figura ficam em graficos/numeros_usados.json,
+que scripts/numeros.py lê para preencher a coluna "Onde aparece" de NUMEROS_CANONICOS.md.
 """
-import os
+import json
+import sys
+from pathlib import Path
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.ticker import FuncFormatter
+import pandas as pd
 
-import comum
+RAIZ = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(RAIZ / 'estilo'))
+sys.path.insert(0, str(RAIZ / 'scripts'))
 
-C = comum.cores()
-AZUL, TINTA, CINZA, ZEBRA, BRANCO = C['azul'], C['tinta'], C['cinza'], C['zebra'], C['branco']
-CINZA_CLARO = '#CFCDD1'          # um passo entre a zebra e o cinza do texto, para grade e faixa
-plt.rcParams.update({
-    'font.family': ['Arial', 'DejaVu Sans'], 'font.size': 10, 'text.color': TINTA,
-    'axes.edgecolor': CINZA_CLARO, 'axes.labelcolor': TINTA, 'xtick.color': TINTA, 'ytick.color': TINTA,
-    'axes.facecolor': BRANCO, 'figure.facecolor': BRANCO, 'axes.spines.top': False, 'axes.spines.right': False,
-    'axes.grid': True, 'grid.color': ZEBRA, 'grid.linewidth': 1.0, 'grid.linestyle': '-', 'axes.axisbelow': True,
-    'savefig.dpi': 160,
-})
+from estilo_portfolio import (COR_BARRA, DESTAQUE, GRAY_10, GRAY_20, GRAY_60, GRAY_70, GRAY_90, NEUTRO,  # noqa: E402
+                              PESO_TITULO, TAM_NOTA, TAM_SUBTITULO, TAM_TITULO, cor_de_texto, eixo_ano, eixo_no_zero,
+                              fonte, misturar, rotular_ponta, set_sus_style, titulo)
 
+import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.ticker import FuncFormatter, MultipleLocator  # noqa: E402
 
-def br(x, casas=0):
-    s = f'{x:,.{casas}f}'
-    return s.replace(',', '#').replace('.', ',').replace('#', '.')
+import comum  # noqa: E402
+import numeros  # noqa: E402
 
-
-def fmt(casas):
-    return FuncFormatter(lambda v, _: br(v, casas))
+SAIDA = RAIZ / 'graficos'
+TRATADOS = RAIZ / 'dados' / 'tratados'
+FONTE_FINANCAS = ('Fonte: Siconfi/Tesouro Nacional (DCA, anexos I-C e I-E) e IBGE (população e IPCA). '
+                  'Municípios parecidos: mesma faixa de população do Censo 2022.')
+USADOS = {}
 
 
-def ler():
-    longo = comum.ler_csv('indicadores_longo.csv')
-    dim = {int(r['cod_ibge']): r for r in comum.ler_csv('dim_municipio.csv')}
-    ind = {r['indicador_id']: r for r in comum.ler_csv('dim_indicador.csv')}
-    ref = {}
-    for r in comum.ler_csv('referencia_faixa.csv'):
-        ref[(r['faixa_porte'], int(r['ano']), r['indicador_id'])] = {k: float(r[k]) for k in ('p25', 'mediana', 'p75')} | {'n': int(r['n'])}
-    valor = {}
-    for r in longo:
-        valor[(int(r['cod_ibge']), int(r['ano']), r['indicador_id'])] = float(r['valor'])
-    return valor, dim, ind, ref
+def usar(figura, N, *nomes):
+    """Devolve os valores dos números e registra que a figura os imprime."""
+    USADOS.setdefault(figura, [])
+    for n in nomes:
+        if n not in USADOS[figura]:
+            USADOS[figura].append(n)
+    vals = [N[n]['valor'] for n in nomes]
+    return vals[0] if len(vals) == 1 else vals
+
+
+def br(casas):
+    return FuncFormatter(lambda v, _: numeros.fmt(v, casas))
+
+
+def pct(v, _=None):
+    return numeros.fmt(v, 0) + '%'
+
+
+def separar(a, b, dist):
+    """Afasta dois rótulos de ponta que ficariam um sobre o outro, mantendo o centro entre eles."""
+    if abs(a - b) >= dist:
+        return a, b
+    meio, sinal = (a + b) / 2, (1 if a >= b else -1)
+    return meio + sinal * dist / 2, meio - sinal * dist / 2
+
+
+def titulo_figura(fig, texto, subtitulo):
+    """Título e subtítulo da figura inteira, quando há mais de um painel (o kit faz o mesmo por eixo)."""
+    fig.text(0.0, 1.0, texto, ha='left', va='bottom', fontsize=TAM_TITULO, fontweight=PESO_TITULO, color=GRAY_90)
+    fig.text(0.0, 0.985, subtitulo, ha='left', va='top', fontsize=TAM_SUBTITULO, color=GRAY_70)
+
+
+def fonte_figura(fig, texto, y=-0.02):
+    fig.text(0.0, y, texto, ha='left', va='top', fontsize=TAM_NOTA, color=GRAY_60)
 
 
 def salvar(fig, nome):
-    os.makedirs(comum.GRAFICOS, exist_ok=True)
-    fig.savefig(os.path.join(comum.GRAFICOS, nome), bbox_inches='tight')
+    SAIDA.mkdir(exist_ok=True)
+    fig.savefig(SAIDA / nome)
     plt.close(fig)
-    print('gravado', nome)
+    print('gravado graficos/' + nome)
 
 
-def serie(valor, cod, ind, anos):
-    return [valor.get((cod, a, ind), np.nan) for a in anos]
+def ler():
+    return {k: pd.read_csv(TRATADOS / f) for k, f in [
+        ('mun', 'dim_municipio.csv'), ('ind', 'dim_indicador.csv'), ('fato', 'indicadores_longo.csv'),
+        ('ref', 'referencia_faixa.csv'), ('prev', 'previsao_receita_total.csv'), ('met', 'backtest_metodos.csv'),
+        ('cob', 'backtest_cobertura.csv')]}
 
 
-def painel(valor, dim, ind, ref, cod):
-    faixa = dim[cod]['faixa_porte']
-    fig, eixos = plt.subplots(2, 4, figsize=(15, 7.2))
-    for ax, i in zip(eixos.flat, comum.INDICADORES_PAINEL):
-        anos = [a for a in comum.ANOS if (faixa, a, i) in ref]
-        y = np.array(serie(valor, cod, i, anos))
-        med = np.array([ref[(faixa, a, i)]['mediana'] for a in anos])
-        q1 = np.array([ref[(faixa, a, i)]['p25'] for a in anos])
-        q3 = np.array([ref[(faixa, a, i)]['p75'] for a in anos])
-        ax.fill_between(anos, q1, q3, color=CINZA, alpha=0.12, linewidth=0)
-        ax.plot(anos, med, color=CINZA, lw=2, solid_capstyle='round')
-        ok = ~np.isnan(y)
-        ax.plot(np.array(anos)[ok], y[ok], color=AZUL, lw=2, marker='o', ms=6, mec=BRANCO, mew=1.5,
-                solid_capstyle='round')
-        casas = int(ind[i]['casas'])
-        ax.yaxis.set_major_formatter(fmt(casas))
-        ax.set_title(ind[i]['nome'], fontsize=10, loc='left', fontweight='bold')
-        ax.set_xticks([2015, 2020, 2025] if max(anos) >= 2025 else [2015, 2019, 2023])
-        ax.tick_params(length=0)
-        ax.text(0, 1.0, '', transform=ax.transAxes)
-        unidade = ind[i]['unidade'].replace('a preços de 2025', 'de 2025')
-        ax.text(0, -0.2, unidade, transform=ax.transAxes, fontsize=8, color=CINZA)
-    leg = eixos.flat[7]
-    leg.axis('off')
-    leg.plot([], [], color=AZUL, lw=2, marker='o', ms=6, mec=BRANCO, label=dim[cod]['municipio'])
-    leg.plot([], [], color=CINZA, lw=2, label='Mediana dos municípios da faixa')
-    leg.fill_between([], [], [], color=CINZA, alpha=0.12, label='Do 1º ao 3º quartil da faixa')
-    leg.legend(loc='upper left', frameon=False, fontsize=10)
-    leg.text(0, 0.28, f'Faixa de porte: {faixa[3:]} habitantes\n(Censo 2022)\n{ref[(faixa, 2024, "receita_pc")]["n"]} municípios na faixa',
-             transform=leg.transAxes, fontsize=9, color=TINTA, va='top')
-    fig.suptitle(f'Município de exemplo comparado com os municípios da sua faixa de porte, 2015 a 2025',
-                 x=0.01, ha='left', fontsize=13, fontweight='bold')
-    fig.text(0.01, 0.005, 'Fontes: Siconfi/Tesouro, IBGE, INEP, DataSUS. Valores em reais de 2025 (IPCA). Município sorteado com semente fixa entre os de série completa.',
-             fontsize=8, color=CINZA)
-    fig.tight_layout(rect=(0, 0.03, 1, 0.95), h_pad=3)
-    salvar(fig, '01-painel-municipio.png')
+# ── Figura 1 ────────────────────────────────────────────────────────────
+def figura_painel(d, N, cod):
+    fig_nome = '01-painel-municipio.png'
+    ex, faixa_txt, n_faixa = usar(fig_nome, N, 'NumExemplo', 'NumExemploFaixa', 'NumExemploNaFaixa')
+    verbo, dif, sentido, objeto = usar(fig_nome, N, 'NumFigUmVerbo', 'NumFigUmDif', 'NumFigUmSentido', 'NumFigUmObjeto')
+    a0, a1 = usar(fig_nome, N, 'NumAnoInicial', 'NumAnoFinal')
+    faixa = d['mun'].set_index('cod_ibge').faixa_porte[cod]
+    nomes = d['ind'].set_index('indicador_id')
+
+    fig, eixos = plt.subplots(2, 2, figsize=(12, 7.4), sharex=True)
+    for ax, i in zip(eixos.flat, numeros.INDICADORES_FIGURA_1):
+        r = d['ref'][(d['ref'].faixa_porte == faixa) & (d['ref'].indicador_id == i)].sort_values('ano')
+        s = d['fato'][(d['fato'].cod_ibge == cod) & (d['fato'].indicador_id == i)].sort_values('ano')
+        ax.fill_between(r.ano, r.p25, r.p75, color=GRAY_10, linewidth=0, zorder=1)
+        ax.plot(r.ano, r.mediana, color=NEUTRO, linewidth=1.6, zorder=2)
+        ax.plot(s.ano, s.valor, color=DESTAQUE, linewidth=2.4, marker='o', markersize=4.5,
+                markeredgecolor='white', markeredgewidth=0.8, zorder=4)
+        casas = int(nomes.casas[i])
+        lo, hi = min(r.p25.min(), s.valor.min()), max(r.p75.max(), s.valor.max())
+        y_mun, y_med = separar(s.valor.iloc[-1], r.mediana.iloc[-1], 0.16 * (hi - lo))
+        rotular_ponta(ax, s.ano.iloc[-1], y_mun, f'{ex}\n{numeros.fmt(s.valor.iloc[-1], casas)}', cor=DESTAQUE)
+        rotular_ponta(ax, r.ano.iloc[-1], y_med, 'mediana', cor=GRAY_60, negrito=False)
+        ax.set_title(nomes.nome[i], loc='left', fontweight='normal', color=GRAY_90, pad=16)
+        ax.annotate(nomes.unidade[i], xy=(0, 1), xycoords='axes fraction', xytext=(0, 3), textcoords='offset points',
+                    ha='left', va='bottom', fontsize=TAM_NOTA, color=GRAY_60)
+        ax.yaxis.set_major_formatter(br(casas))
+        eixo_ano(ax)
+        ax.set_xlim(int(a0) - 0.3, int(a1) + 0.3)
+        ax.set_ylim(lo - 0.12 * (hi - lo), hi + 0.12 * (hi - lo))
+    fig.tight_layout(rect=(0, 0, 0.93, 0.90), h_pad=2.6, w_pad=5)
+    titulo_figura(fig, f'{ex} {verbo} {dif}% {sentido} {objeto} que a mediana dos {n_faixa} municípios {faixa_txt} habitantes',
+                  f'Valor do município (vermelho), mediana dos municípios parecidos (linha cinza) e faixa do 1º ao 3º quartil '
+                  f'(sombra), {a0} a {a1}. Os eixos não começam no zero.')
+    fonte_figura(fig, FONTE_FINANCAS + '\nReais de 2025 (IPCA). Os valores por habitante têm um degrau entre 2021 e 2022 '
+                      '(troca da base de população para o Censo 2022).')
+    salvar(fig, fig_nome)
 
 
-def faixa_dispersao(valor, dim, ind, ref, cod):
-    faixa = dim[cod]['faixa_porte']
-    ano = 2025
-    pares = [('receita_pc', ano), ('saude_pc', ano), ('educacao_pc', ano)]
-    fig, eixos = plt.subplots(1, 3, figsize=(13, 3.8))
-    rng = np.random.default_rng(comum.SEMENTE)
-    for ax, (i, a) in zip(eixos, pares):
-        outros = [valor[(c, a, i)] for c in dim if dim[c]['faixa_porte'] == faixa and (c, a, i) in valor and c != cod]
-        y = rng.uniform(-0.35, 0.35, len(outros))
-        ax.scatter(outros, y, s=22, color=CINZA, alpha=0.45, linewidths=0)
-        r = ref[(faixa, a, i)]
-        ax.axvline(r['mediana'], color=TINTA, lw=1.5)
-        ax.text(r['mediana'], 0.66, ' mediana', ha='left', fontsize=8.5, color=TINTA)
-        v = valor.get((cod, a, i))
-        if v is not None:
-            ax.scatter([v], [0], s=110, color=AZUL, edgecolors=BRANCO, linewidths=2, zorder=5)
-            ax.annotate(dim[cod]['municipio'], (v, 0), xytext=(0, 26), textcoords='offset points', ha='center',
-                        fontsize=9, color=TINTA, bbox=dict(boxstyle='round,pad=0.25', fc=BRANCO, ec='none', alpha=0.9),
-                        arrowprops=dict(arrowstyle='-', color=CINZA, lw=1))
-        ax.set_ylim(-0.8, 0.8)
-        ax.set_yticks([])
-        ax.xaxis.set_major_formatter(fmt(0))
-        ax.set_title(ind[i]['nome'] + f' ({a})', fontsize=10, loc='left', fontweight='bold')
-        ax.grid(axis='y', visible=False)
-        ax.spines['left'].set_visible(False)
-        ax.tick_params(length=0)
-        ax.set_xlabel('R$ por habitante, a preços de 2025')
-    fig.suptitle(f'Cada ponto cinza é um município da faixa {faixa[3:]} habitantes; o azul é o município de exemplo',
-                 x=0.01, ha='left', fontsize=12, fontweight='bold')
-    fig.tight_layout(rect=(0, 0, 1, 0.92))
-    salvar(fig, '02-municipio-na-faixa.png')
+# ── Figura 2 ────────────────────────────────────────────────────────────
+def figura_faixa(d, N, cod):
+    fig_nome = '02-municipio-na-faixa.png'
+    ex, faixa_txt, n_faixa = usar(fig_nome, N, 'NumExemplo', 'NumExemploFaixa', 'NumExemploNaFaixa')
+    acima, total = usar(fig_nome, N, 'NumFigDoisAcima', 'NumIndicadoresComparaveis')
+    faixa = d['mun'].set_index('cod_ibge').faixa_porte[cod]
+    nomes = d['ind'].set_index('indicador_id')
+    membros = set(d['mun'][d['mun'].faixa_porte == faixa].cod_ibge)
+
+    linhas = []
+    for i in comum.INDICADORES_PAINEL:
+        s = d['fato'][(d['fato'].cod_ibge == cod) & (d['fato'].indicador_id == i)]
+        ano = int(s.ano.max())
+        med = float(d['ref'][(d['ref'].faixa_porte == faixa) & (d['ref'].ano == ano) & (d['ref'].indicador_id == i)].mediana.iloc[0])
+        grupo = d['fato'][(d['fato'].indicador_id == i) & (d['fato'].ano == ano) & d['fato'].cod_ibge.isin(membros)]
+        rel = (grupo.valor / med - 1) * 100
+        v = (float(s[s.ano == ano].valor.iloc[0]) / med - 1) * 100
+        linhas.append((f'{nomes.nome[i]} ({ano})', rel.to_numpy(), v))
+    linhas = linhas[::-1]           # o primeiro Indicador fica em cima
+
+    fig, ax = plt.subplots(figsize=(11, 6.2))
+    ax.boxplot([l[1] for l in linhas], orientation='horizontal', widths=0.5, showfliers=False, patch_artist=True,
+               boxprops=dict(facecolor=misturar(COR_BARRA, 0.70), edgecolor=COR_BARRA, linewidth=1),
+               medianprops=dict(color=COR_BARRA, linewidth=1.6), whiskerprops=dict(color=COR_BARRA, linewidth=1),
+               capprops=dict(color=COR_BARRA, linewidth=1))
+    for k, (_, _, v) in enumerate(linhas, start=1):
+        ax.scatter([v], [k], s=70, color=DESTAQUE, edgecolor='white', linewidth=1, zorder=5)
+        ax.annotate(('+' if v > 0 else '−') + numeros.fmt(abs(v), 1) + '%', (v, k), xytext=(0, 13),
+                    textcoords='offset points', ha='center', va='bottom', fontsize=TAM_NOTA, color=cor_de_texto(DESTAQUE),
+                    bbox=dict(boxstyle='square,pad=0.1', facecolor='white', edgecolor='none'), zorder=6)
+    ax.axvline(0, color=GRAY_60, linewidth=1, zorder=1)
+    ax.set_yticks(range(1, len(linhas) + 1), [l[0] for l in linhas])
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: ('+' if v > 0 else '−' if v < 0 else '') + pct(abs(v))))
+    ax.set_xlabel('diferença para a mediana da faixa')
+    ax.grid(axis='x', color=GRAY_20, linewidth=0.7, linestyle=(0, (4, 4)))
+    ax.grid(axis='y', visible=False)
+    titulo(ax, f'{ex} fica acima da mediana dos municípios parecidos em {acima} de {total} indicadores',
+           f'Em vermelho, {ex}. A caixa vai do 1º ao 3º quartil dos {n_faixa} municípios {faixa_txt} habitantes; '
+           'último ano com dado de cada indicador.')
+    fonte(ax, 'Fonte: Siconfi/Tesouro Nacional, IBGE, INEP (Ideb) e DataSUS (SINASC). As hastes vão até 1,5 vez o comprimento '
+              'da caixa; pontos além delas ficam fora do quadro.')
+    salvar(fig, fig_nome)
 
 
-def captura_2x2(valor, dim, ind, ref, cod):
-    """A captura do site (ticket 53, F6): quatro indicadores, dois por dois, legíveis a 390 px.
+# ── Figura 3 ────────────────────────────────────────────────────────────
+def figura_previsao(d, N, cod):
+    fig_nome = '03-previsao.png'
+    ex, prev, lo9, hi9 = usar(fig_nome, N, 'NumExemplo', 'NumExemploPrevista', 'NumExemploInfNoventaCinco', 'NumExemploSupNoventaCinco')
+    af, a0 = usar(fig_nome, N, 'NumAnoPrevFinal', 'NumAnoInicial')
+    s = d['fato'][(d['fato'].cod_ibge == cod) & (d['fato'].indicador_id == 'receita_total')].sort_values('ano')
+    p = d['prev'][d['prev'].cod_ibge == cod].sort_values('ano')
+    ancora_ano, ancora_v = int(s.ano.iloc[-1]), float(s.valor.iloc[-1])
+    anos = [ancora_ano] + list(p.ano)
 
-    O site a mostra em cerca de 300 px de largura no celular: o arquivo é pequeno (5,2 x 5,6 polegadas, 230 dpi)
-    e o texto é grande para ele (14 pt nos títulos e 13 pt nos eixos, cerca de 10 px no celular). Sem título dentro
-    da imagem (a página o escreve), sem nome de município, uma legenda só.
-    """
-    faixa = dim[cod]['faixa_porte']
-    quatro = [('receita_pc', 'Receita corrente\npor habitante (R$)'), ('dependencia_transf', 'Dependência de\ntransferências (%)'),
-              ('saude_pc', 'Saúde: despesa\npor habitante (R$)'), ('educacao_pc', 'Educação: despesa\npor habitante (R$)')]
-    fig, eixos = plt.subplots(2, 2, figsize=(5.2, 5.6))
-    for ax, (i, titulo) in zip(eixos.flat, quatro):
-        anos = [a for a in comum.ANOS if (faixa, a, i) in ref]
-        y = np.array(serie(valor, cod, i, anos))
-        med = np.array([ref[(faixa, a, i)]['mediana'] for a in anos])
-        q1 = np.array([ref[(faixa, a, i)]['p25'] for a in anos])
-        q3 = np.array([ref[(faixa, a, i)]['p75'] for a in anos])
-        ax.fill_between(anos, q1, q3, color=CINZA, alpha=0.12, linewidth=0)
-        ax.plot(anos, med, color=CINZA, lw=2.4, solid_capstyle='round')
-        ok = ~np.isnan(y)
-        ax.plot(np.array(anos)[ok], y[ok], color=AZUL, lw=2.4, marker='o', ms=5, mec=BRANCO, mew=1.2, solid_capstyle='round')
-        ax.yaxis.set_major_formatter(fmt(int(ind[i]['casas']) if i != 'dependencia_transf' else 0))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.set_title(titulo, fontsize=13, loc='left', fontweight='bold', linespacing=1.15)
-        ax.set_xticks([2015, 2020, 2025])
-        ax.tick_params(length=0, labelsize=12.5)
-    fig.legend(handles=[
-        plt.Line2D([], [], color=AZUL, lw=2.4, marker='o', ms=5, mec=BRANCO, label='Município de exemplo'),
-        plt.Line2D([], [], color=CINZA, lw=2.4, label='Mediana da faixa de porte'),
-        plt.Rectangle((0, 0), 1, 1, color=CINZA, alpha=0.12, linewidth=0, label='Do 1º ao 3º quartil'),
-    ], loc='lower center', ncol=1, frameon=False, fontsize=12.5, bbox_to_anchor=(0.5, -0.005), alignment='left')
-    fig.tight_layout(rect=(0, 0.17, 1, 1), h_pad=1.6, w_pad=1.2)
-    os.makedirs(comum.CAPTURA, exist_ok=True)
-    caminho = os.path.join(comum.CAPTURA, 'amostra-painel-2x2.jpg')
-    fig.savefig(caminho, dpi=230, pil_kwargs={'quality': 90})
-    plt.close(fig)
-    print('gravado', os.path.relpath(caminho, comum.RAIZ))
+    def com_ancora(col):
+        return [ancora_v] + list(p[col])
 
-
-def previsao(valor, dim, ind, cod):
-    prev = {(int(r['cod_ibge']), int(r['ano'])): r for r in comum.ler_csv('previsao_receita_total.csv')}
-    anos = comum.ANOS
-    y = [valor.get((cod, a, 'receita_total'), np.nan) for a in anos]
-    fa = [2026, 2027, 2028]
-    f = [prev[(cod, a)] for a in fa]
-    x_prev = [2025] + fa
-    ponto = [y[-1]] + [float(r['previsto']) for r in f]
-    fig, ax = plt.subplots(figsize=(9, 4.6))
-    for nivel, alpha in (('95', 0.10), ('80', 0.20)):
-        lo = [y[-1]] + [float(r[f'inferior_{nivel}']) for r in f]
-        hi = [y[-1]] + [float(r[f'superior_{nivel}']) for r in f]
-        ax.fill_between(x_prev, lo, hi, color=AZUL, alpha=alpha, linewidth=0)
-    ax.plot(anos, y, color=AZUL, lw=2, marker='o', ms=6, mec=BRANCO, mew=1.5)
-    ax.plot(x_prev, ponto, color=AZUL, lw=2, ls=(0, (4, 3)), marker='o', ms=6, mfc=BRANCO, mec=AZUL, mew=1.5)
-    ax.yaxis.set_major_formatter(fmt(0))
-    ax.set_xticks(anos + fa)
-    ax.tick_params(length=0)
-    ax.set_ylabel('R$ milhões, a preços de 2025')
-    ax.annotate('observado', (anos[1], y[1]), xytext=(0, 12), textcoords='offset points', ha='center', fontsize=9)
-    ax.annotate(f'previsto 2028: R$ {br(ponto[-1], 0)} mi', (2028, ponto[-1]), xytext=(-8, 14), textcoords='offset points',
-                ha='right', fontsize=9)
-    ax.plot([], [], color=AZUL, lw=2, label='Observado')
-    ax.plot([], [], color=AZUL, lw=2, ls=(0, (4, 3)), label='Previsto')
-    ax.fill_between([], [], [], color=AZUL, alpha=0.20, label='Faixa de 80%')
-    ax.fill_between([], [], [], color=AZUL, alpha=0.10, label='Faixa de 95%')
-    ax.legend(loc='lower left', frameon=False, fontsize=9, ncol=2)
-    ax.set_title(f'Receita corrente de {dim[cod]["municipio"]}: observado até 2025 e previsão para 2026 a 2028',
-                 loc='left', fontsize=11, fontweight='bold')
-    fig.text(0.01, -0.04,
-             f'Método: {f[0]["metodo"]} sobre o logaritmo da série. A faixa vem dos erros que o método cometeu\n'
-             'ao prever o passado de todos os municípios do mesmo grupo de porte (scripts/modelo.py).',
-             fontsize=8, color=CINZA)
-    salvar(fig, '03-previsao.png')
+    fig, ax = plt.subplots(figsize=(10.5, 5.6))
+    ax.fill_between(anos, com_ancora('inferior_95'), com_ancora('superior_95'), color=misturar(DESTAQUE, 0.90), linewidth=0, zorder=1)
+    ax.fill_between(anos, com_ancora('inferior_80'), com_ancora('superior_80'), color=misturar(DESTAQUE, 0.78), linewidth=0, zorder=2)
+    ax.plot(anos, com_ancora('previsto'), color=DESTAQUE, linewidth=2.2, linestyle=(0, (5, 3)), zorder=3)
+    ax.plot(s.ano, s.valor, color=DESTAQUE, linewidth=2.6, marker='o', markersize=5, markeredgecolor='white',
+            markeredgewidth=0.8, zorder=4)
+    x = p.ano.iloc[-1]
+    rotular_ponta(ax, x, p.previsto.iloc[-1], f'previsto: {prev}', cor=DESTAQUE)
+    rotular_ponta(ax, x, (p.superior_80.iloc[-1] + p.superior_95.iloc[-1]) / 2, 'intervalo de 95%', cor=GRAY_60, negrito=False)
+    rotular_ponta(ax, x, (p.superior_80.iloc[-1] + p.previsto.iloc[-1]) / 2, 'intervalo de 80%', cor=GRAY_60, negrito=False)
+    ax.axvline(ancora_ano + 0.5, color=GRAY_60, linewidth=0.8, linestyle=(0, (4, 3)), zorder=0)
+    ax.annotate('previsão', xy=(ancora_ano + 0.5, 1), xycoords=('data', 'axes fraction'), xytext=(5, -2),
+                textcoords='offset points', ha='left', va='top', fontsize=TAM_NOTA, color=GRAY_70)
+    ax.yaxis.set_major_formatter(br(0))
+    ax.set_ylabel('R$ milhões de 2025')
+    eixo_ano(ax)
+    ax.set_xlim(int(a0) - 0.3, int(af) + 0.3)
+    # "R\$": dois cifrões no mesmo texto abririam o modo matemático do matplotlib
+    titulo(ax, f'A receita de {ex} deve chegar a R\\$ {prev} milhões em {af},\nentre R\\$ {lo9} e R\\$ {hi9} milhões no intervalo de 95%',
+           f'Receita corrente total, observada até {ancora_ano} e prevista pela tendência dos 3 últimos anos. '
+           'O eixo não começa no zero.')
+    fonte(ax, 'Fonte: Siconfi/Tesouro Nacional (DCA, anexo I-C) e IBGE (IPCA). Intervalos tirados dos erros do método ao prever o passado.')
+    salvar(fig, fig_nome)
 
 
-def backtest():
-    metodos = comum.ler_csv('backtest_metodos.csv')
-    cob = comum.ler_csv('backtest_cobertura.csv')
-    fig, (a, b) = plt.subplots(1, 2, figsize=(12.5, 4.4))
-    nomes = {'ingenuo': 'Repetir o último valor', 'tendencia3': 'Tendência dos 3 últimos anos',
-             'tendencia5': 'Reta dos 5 últimos anos'}
-    ordem = ['ingenuo', 'tendencia3', 'tendencia5']
-    hs = sorted({int(r['horizonte']) for r in metodos})
-    larg = 0.24
-    escolhido = next(r['metodo'] for r in metodos if r['escolhido'] == '1')
-    for k, m in enumerate(ordem):
-        v = [float(next(r['erro_medio_abs_pct'] for r in metodos if r['metodo'] == m and int(r['horizonte']) == h)) for h in hs]
-        x = np.arange(len(hs)) + (k - 1) * (larg + 0.03)
-        a.bar(x, v, width=larg, color=AZUL if m == escolhido else CINZA, alpha=1 if m == escolhido else 0.55)
-        for xi, vi in zip(x, v):
-            a.text(xi, vi + 0.15, br(vi, 1), ha='center', fontsize=8)
-    a.set_xticks(np.arange(len(hs)))
-    a.set_xticklabels([f'{h} ano{"s" if h > 1 else ""} à frente' for h in hs])
-    a.yaxis.set_major_formatter(fmt(1))
-    a.set_ylabel('Erro médio absoluto, % do valor')
-    a.set_title('Quanto cada método errou ao prever o passado', loc='left', fontsize=11, fontweight='bold')
-    a.grid(axis='x', visible=False)
-    a.tick_params(length=0)
-    from matplotlib.patches import Patch
-    a.legend(handles=[Patch(facecolor=AZUL if m == escolhido else CINZA, alpha=1 if m == escolhido else 0.55,
-                            label=nomes[m] + (' (escolhido)' if m == escolhido else '')) for m in ordem],
-             frameon=False, fontsize=8.5, loc='upper left')
+# ── Figura 4 ────────────────────────────────────────────────────────────
+def figura_teste(d, N):
+    fig_nome = '04-teste-do-modelo.png'
+    e3, i3 = usar(fig_nome, N, 'NumErroEscolhidoTres', 'NumErroIngenuoTres')
+    pior, origem, media = usar(fig_nome, N, 'NumCobOitentaPior', 'NumCobOitentaPiorOrigem', 'NumCobOitentaCom')
+    o0, o1 = usar(fig_nome, N, 'NumOrigemInicial', 'NumOrigemFinal')
+    nomes = {'ingenuo': 'Repetir o último valor', 'tendencia3': 'Tendência dos 3 últimos anos', 'tendencia5': 'Reta dos 5 últimos anos'}
 
-    origens = sorted({int(r['origem_fora']) for r in cob})
-    for nv, cor in ((80, AZUL), (95, TINTA)):
-        sem, com = [], []
-        for T0 in origens:
-            ll = [r for r in cob if int(r['origem_fora']) == T0 and int(r['nivel']) == nv]
-            n = sum(int(r['n_teste']) for r in ll)
-            sem.append(sum(float(r['cobertura_sem_ajuste']) * int(r['n_teste']) for r in ll) / n)
-            com.append(sum(float(r['cobertura_com_ajuste']) * int(r['n_teste']) for r in ll) / n)
-        b.scatter(origens, sem, s=70, facecolors=BRANCO, edgecolors=cor, linewidths=2, zorder=3)
-        b.scatter(origens, com, s=70, color=cor, edgecolors=BRANCO, linewidths=1.5, zorder=4, label=f'Faixa de {nv}%, ajustada')
-        b.axhline(nv, color=cor, lw=1, alpha=0.5)
-        b.text(origens[-1] + 0.45, nv, f'{nv}%', va='center', fontsize=8.5)
-    b.set_xticks(origens)
-    b.set_xticklabels([f'{o} fora' for o in origens])
-    b.set_xlim(origens[0] - 0.5, origens[-1] + 0.9)
-    b.set_ylim(40, 102)
-    b.set_ylabel('% dos valores reais dentro da faixa')
-    b.set_title('A faixa cobre o que promete? Teste com uma origem de fora', loc='left', fontsize=11, fontweight='bold')
-    from matplotlib.lines import Line2D
-    b.legend(handles=[Line2D([], [], marker='o', ls='', mfc=AZUL, mec=BRANCO, ms=8, label='Faixa de 80%, depois do ajuste'),
-                      Line2D([], [], marker='o', ls='', mfc=TINTA, mec=BRANCO, ms=8, label='Faixa de 95%, depois do ajuste'),
-                      Line2D([], [], marker='o', ls='', mfc=BRANCO, mec=CINZA, ms=8, label='Antes do ajuste (círculo vazado)')],
-             frameon=False, fontsize=8.5, loc='lower left')
-    b.grid(axis='x', visible=False)
-    b.tick_params(length=0)
-    fig.text(0.01, -0.03, 'Cada ponto: a faixa calibrada com as outras três origens (anos em que a previsão partiu) e conferida na que ficou de fora. '
-             'Linhas finas: cobertura prometida.', fontsize=8, color=CINZA)
-    salvar(fig, '04-teste-do-modelo.png')
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(12.5, 5.2), gridspec_kw=dict(width_ratios=[1.15, 1]))
+    finais = {}
+    for m, g in d['met'].groupby('metodo'):
+        g = g.sort_values('horizonte')
+        escolhido = int(g.escolhido.iloc[0]) == 1
+        cor = DESTAQUE if escolhido else NEUTRO
+        a1.plot(g.horizonte, g.erro_medio_abs_pct, color=cor, linewidth=2.6 if escolhido else 1.6, marker='o',
+                markersize=5, markeredgecolor='white', zorder=4 if escolhido else 2)
+        finais[m] = (float(g.erro_medio_abs_pct.iloc[-1]), cor, escolhido)
+    # os dois rótulos mais baixos (reta e tendência) ficam perto: afastá-los para não se tocarem
+    ordem = sorted(finais, key=lambda m: finais[m][0])
+    ys = {m: finais[m][0] for m in ordem}
+    ys[ordem[0]], ys[ordem[1]] = separar(ys[ordem[0]], ys[ordem[1]], 1.2)
+    for m in ordem:
+        v, cor, escolhido = finais[m]
+        rotular_ponta(a1, 3, ys[m], f'{nomes[m]}: {numeros.fmt(v, 1)}%', cor=cor, negrito=escolhido)
+    a1.set_xticks([1, 2, 3], ['1 ano', '2 anos', '3 anos'])
+    a1.set_xlim(0.8, 3.1)
+    a1.yaxis.set_major_locator(MultipleLocator(5))
+    a1.yaxis.set_major_formatter(FuncFormatter(pct))
+    eixo_no_zero(a1)
+    a1.set_title('Erro médio absoluto, por horizonte', loc='left', fontweight='normal', color=GRAY_90)
+
+    cob = d['cob'][d['cob'].nivel == 80]
+    por_origem = {int(o): numeros.ponderada(g, 'cobertura_com_ajuste') for o, g in cob.groupby('origem_fora')}
+    cores = [DESTAQUE if o == int(origem) else NEUTRO for o in por_origem]
+    a2.bar([str(o) for o in por_origem], list(por_origem.values()), color=cores, width=0.6)
+    for x, (v, c) in enumerate(zip(por_origem.values(), cores)):
+        a2.annotate(pct(v), (x, v), xytext=(0, 4), textcoords='offset points', ha='center',
+                    va='bottom', fontsize=TAM_NOTA, color=cor_de_texto(c))
+    a2.axhline(80, color=GRAY_70, linewidth=1, linestyle=(0, (4, 3)))
+    a2.annotate('80% prometidos', xy=(1, 80), xycoords=('axes fraction', 'data'), xytext=(0, 4),
+                textcoords='offset points', ha='right', va='bottom', fontsize=TAM_NOTA, color=GRAY_70)
+    a2.yaxis.set_major_formatter(FuncFormatter(pct))
+    eixo_no_zero(a2, topo=100)
+    a2.set_title('Cobertura do intervalo de 80%, por origem deixada de fora', loc='left', fontweight='normal', color=GRAY_90)
+
+    fig.tight_layout(rect=(0, 0, 0.97, 0.88), w_pad=14)
+    titulo_figura(fig, f'A tendência dos 3 últimos anos erra {e3}% a três anos, contra {i3}% de repetir o último valor',
+                  f'Previsões feitas a partir de {o0} a {o1} e comparadas ao que veio depois. Na média, o intervalo de 80% '
+                  f'cobriu {media}%;\ncom {origem} deixado de fora, cobriu {pior}%.')
+    fonte_figura(fig, 'Fonte: Siconfi/Tesouro Nacional (DCA, anexo I-C), receita corrente total dos municípios de SP. '
+                      'Cobertura ponderada pelo número de previsões testadas.')
+    salvar(fig, fig_nome)
 
 
 def main():
-    valor, dim, ind, ref = ler()
-    cod, n = comum.municipio_de_exemplo()
-    print('município de exemplo:', cod, dim[cod]['municipio'], '(sorteado entre', n, ')')
-    painel(valor, dim, ind, ref, cod)
-    faixa_dispersao(valor, dim, ind, ref, cod)
-    captura_2x2(valor, dim, ind, ref, cod)
-    if os.path.exists(os.path.join(comum.TRATADOS, 'previsao_receita_total.csv')):
-        previsao(valor, dim, ind, cod)
-        backtest()
+    set_sus_style()
+    N = numeros.calcular()
+    cod, _ = comum.municipio_de_exemplo()
+    d = ler()
+    figura_painel(d, N, cod)
+    figura_faixa(d, N, cod)
+    figura_previsao(d, N, cod)
+    figura_teste(d, N)
+    (SAIDA / 'numeros_usados.json').write_text(json.dumps(USADOS, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    print('gravado graficos/numeros_usados.json')
 
 
 if __name__ == '__main__':

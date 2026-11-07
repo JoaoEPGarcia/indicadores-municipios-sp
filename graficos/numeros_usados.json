@@ -1,0 +1,37 @@
+{
+  "01-painel-municipio.png": [
+    "NumExemplo",
+    "NumExemploFaixa",
+    "NumExemploNaFaixa",
+    "NumFigUmVerbo",
+    "NumFigUmDif",
+    "NumFigUmSentido",
+    "NumFigUmObjeto",
+    "NumAnoInicial",
+    "NumAnoFinal"
+  ],
+  "02-municipio-na-faixa.png": [
+    "NumExemplo",
+    "NumExemploFaixa",
+    "NumExemploNaFaixa",
+    "NumFigDoisAcima",
+    "NumIndicadoresComparaveis"
+  ],
+  "03-previsao.png": [
+    "NumExemplo",
+    "NumExemploPrevista",
+    "NumExemploInfNoventaCinco",
+    "NumExemploSupNoventaCinco",
+    "NumAnoPrevFinal",
+    "NumAnoInicial"
+  ],
+  "04-teste-do-modelo.png": [
+    "NumErroEscolhidoTres",
+    "NumErroIngenuoTres",
+    "NumCobOitentaPior",
+    "NumCobOitentaPiorOrigem",
+    "NumCobOitentaCom",
+    "NumOrigemInicial",
+    "NumOrigemFinal"
+  ]
+}
