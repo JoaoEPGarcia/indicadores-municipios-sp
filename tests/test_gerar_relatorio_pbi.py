@@ -141,6 +141,10 @@ class TesteRelatorioGerado(unittest.TestCase):
             self.assertEqual(papeis, sorted(papeis), pagina)
             self.assertEqual(visuais[0]['visual']['visualType'], 'textbox', f'{pagina}: o título vem primeiro')
 
+    def test_titulo_da_evolucao_vem_da_medida(self):
+        titulo = self.visuais[('municipio', 'p1_evolucao')]['visual']['visualContainerObjects']['title'][0]
+        self.assertEqual(titulo['properties']['text']['expr']['Measure']['Property'], 'Título da evolução')
+
     # ── segmentações ──
     def segmentacoes(self, coluna):
         """{página: visual} das segmentações sobre (tabela, coluna)."""

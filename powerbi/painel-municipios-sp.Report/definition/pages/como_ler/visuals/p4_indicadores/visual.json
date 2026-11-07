@@ -1,0 +1,190 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "p4_indicadores",
+  "position": {
+    "x": 24,
+    "y": 64,
+    "z": 2000,
+    "width": 800,
+    "height": 320,
+    "tabOrder": 1
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_indicador"
+                    }
+                  },
+                  "Property": "nome"
+                }
+              },
+              "queryRef": "dim_indicador.nome",
+              "nativeQueryRef": "Indicador",
+              "displayName": "Indicador"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_indicador"
+                    }
+                  },
+                  "Property": "unidade"
+                }
+              },
+              "queryRef": "dim_indicador.unidade",
+              "nativeQueryRef": "Unidade",
+              "displayName": "Unidade"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_indicador"
+                    }
+                  },
+                  "Property": "formula"
+                }
+              },
+              "queryRef": "dim_indicador.formula",
+              "nativeQueryRef": "Fórmula",
+              "displayName": "Fórmula"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_indicador"
+                    }
+                  },
+                  "Property": "fonte"
+                }
+              },
+              "queryRef": "dim_indicador.fonte",
+              "nativeQueryRef": "Fonte",
+              "displayName": "Fonte"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_indicador"
+                    }
+                  },
+                  "Property": "periodicidade"
+                }
+              },
+              "queryRef": "dim_indicador.periodicidade",
+              "nativeQueryRef": "Periodicidade",
+              "displayName": "Periodicidade"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "dim_indicador"
+                    }
+                  },
+                  "Property": "meta"
+                }
+              },
+              "queryRef": "dim_indicador.meta",
+              "nativeQueryRef": "Meta",
+              "displayName": "Meta"
+            }
+          ]
+        }
+      }
+    },
+    "objects": {
+      "columnHeaders": [
+        {
+          "properties": {
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "general": [
+        {
+          "properties": {
+            "altText": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Tabela dos Indicadores: o nome, a unidade, a fórmula, a fonte, a periodicidade e a meta de cada um.'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "visualHeader": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Os Indicadores e como cada um é calculado'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}
