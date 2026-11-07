@@ -7,6 +7,7 @@ arquivo gravado com openpyxl e olham o que quem abre a planilha encontra: as aba
 nomeadas, as listas de escolha, as fórmulas nas células que o passo a passo indica e os gráficos.
 Os valores das fórmulas não são testados aqui: quem calcula é o Excel, e quem confere é scripts/conferir_excel.py.
 """
+import json
 import re
 import subprocess
 import sys
@@ -152,7 +153,6 @@ class PlanilhaGerada(unittest.TestCase):
             wb.close()
 
     def test_registro_dos_numeros_impressos_ao_lado_da_planilha(self):
-        import json
         usados = json.loads((self.saida.parent / 'numeros_usados.json').read_text(encoding='utf-8'))
         self.assertIn('NumExemplo', usados[self.saida.name])
 

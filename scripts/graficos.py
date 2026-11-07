@@ -100,7 +100,7 @@ def figura_painel(d, N, cod):
     nomes = d['ind'].set_index('indicador_id')
 
     fig, eixos = plt.subplots(2, 2, figsize=(12, 7.4), sharex=True)
-    for ax, i in zip(eixos.flat, numeros.INDICADORES_FIGURA_1):
+    for ax, i in zip(eixos.flat, comum.INDICADORES_RESUMO):
         r = d['ref'][(d['ref'].faixa_porte == faixa) & (d['ref'].indicador_id == i)].sort_values('ano')
         s = d['fato'][(d['fato'].cod_ibge == cod) & (d['fato'].indicador_id == i)].sort_values('ano')
         ax.fill_between(r.ano, r.p25, r.p75, color=GRAY_10, linewidth=0, zorder=1)

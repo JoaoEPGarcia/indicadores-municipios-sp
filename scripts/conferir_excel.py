@@ -32,14 +32,11 @@ import openpyxl
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / 'scripts'))
 import comum  # noqa: E402
-from conferir_powerbi import ler_conferencia  # noqa: E402
+import layout_planilha as L  # noqa: E402
 
-CALCULADAS = RAIZ / 'excel' / 'calculadas'
-SAIDA = RAIZ / 'excel' / 'resultado_conferencia_excel.json'
-SQLITE = RAIZ / 'dados' / 'tratados' / 'amostra.sqlite'
-ORIGEM = 'scripts/montar_excel.py'
-LINHA_TABELA = 13          # primeira linha da tabela de Indicadores na aba Painel
-LINHA_PREVISAO = 8         # primeira linha da tabela da aba Previsão
+CALCULADAS = comum.EXCEL / 'calculadas'
+SAIDA = comum.EXCEL / 'resultado_conferencia_excel.json'
+SQLITE = comum.TRATADOS / 'amostra.sqlite'
 ERROS = {'#N/A', '#N/D'}   # como o arquivo guarda o NÃO.DISP() (o Excel grava em inglês)
 
 
@@ -51,7 +48,7 @@ def esperado_painel(con, cod, ind):
     r = con.execute('SELECT MAX(ano) FROM fato_indicador WHERE cod_ibge = ? AND indicador_id = ?', (cod, ind)).fetchone()
     ano = r[0]
     if ano is None:
-        return dict(ano='n.d.', valor='n.d.', mediana='n.d.', diferenca='n.d.', posicao='n.d.')
+        return dict.fromkeys(L.COLUNAS_TABELA, 'n.d.')
     v, med, pos = con.execute(
         'SELECT f.valor, r.mediana, p.posicao_na_faixa / 100.0 FROM fato_indicador f '
         'JOIN dim_municipio d ON d.cod_ibge = f.cod_ibge '
@@ -70,10 +67,10 @@ def igual(esperado, obtido):
 
 
 def e_referencia(wb):
-    nome = wb.defined_names.get('OrigemDaPlanilha')
-    if nome is not None and ORIGEM in (nome.attr_text or ''):
+    nome = wb.defined_names.get(L.NOME_ORIGEM)
+    if nome is not None and L.ORIGEM in (nome.attr_text or ''):
         return True
-    return any(p.name == 'Origem' and p.value == ORIGEM for p in getattr(wb, 'custom_doc_props', []))
+    return any(p.name == 'Origem' and p.value == L.ORIGEM for p in getattr(wb, 'custom_doc_props', []))
 
 
 def conferir_arquivo(caminho, con):
@@ -83,48 +80,46 @@ def conferir_arquivo(caminho, con):
     except Exception as e:      # arquivo que não é .xlsx, corrompido, inexistente
         raise NaoConfere(f'{caminho}: não abre como planilha ({e})')
     try:
-        for aba in ('Painel', 'Previsão'):
+        for aba in (L.PAINEL, L.PREVISAO):
             if aba not in wb.sheetnames:
                 raise NaoConfere(f'{caminho}: falta a aba "{aba}"')
-        painel, prev = wb['Painel'], wb['Previsão']
-        nome = painel['C4'].value
-        tabela = [painel.cell(LINHA_TABELA + k, c).value for k in range(len(comum.INDICADORES_PAINEL)) for c in range(4, 9)]
-        if painel['C5'].value in (None, '', 0) or all(v is None for v in tabela):
+        painel, prev = wb[L.PAINEL], wb[L.PREVISAO]
+        nome, codigo = painel[L.MUNICIPIO].value, painel[L.CODIGO].value
+        tabela = [{campo: painel[L.celula_tabela(campo, k)].value for campo in L.COLUNAS_TABELA}
+                  for k in range(len(comum.INDICADORES_PAINEL))]
+        if codigo in (None, '', 0) or all(v is None for linha in tabela for v in linha.values()):
             raise NaoConfere(f'{caminho}: sem valores calculados. O arquivo nunca foi calculado pelo Excel: abra-o no Excel '
                              '(para a web), espere as fórmulas calcularem e baixe uma cópia (Arquivo → Salvar como → Baixar uma Cópia).')
         cod = con.execute('SELECT cod_ibge FROM dim_municipio WHERE municipio = ?', (nome,)).fetchone()
         if cod is None:
-            raise NaoConfere(f'{caminho}: município escolhido em Painel!C4 não encontrado: {nome!r}')
+            raise NaoConfere(f'{caminho}: município escolhido em {L.PAINEL}!{L.MUNICIPIO} não encontrado: {nome!r}')
         cod = cod[0]
         celulas, divergencias = 0, []
-        if painel['C5'].value != cod:
-            divergencias.append(f'{nome} | Painel | C5 (código IBGE): esperado {cod}, obtido {painel["C5"].value}')
-        for k, ind in enumerate(comum.INDICADORES_PAINEL):
-            r = LINHA_TABELA + k
+        if codigo != cod:
+            divergencias.append(f'{nome} | Painel | {L.CODIGO} (código IBGE): esperado {cod}, obtido {codigo}')
+        for ind, obtido in zip(comum.INDICADORES_PAINEL, tabela):
             e = esperado_painel(con, cod, ind)
-            obtido = dict(zip(['ano', 'valor', 'mediana', 'diferenca', 'posicao'], (painel.cell(r, c).value for c in range(4, 9))))
             for campo in e:
                 celulas += 1
                 if not igual(e[campo], obtido[campo]):
                     divergencias.append(f'{nome} | Painel | {ind} | {campo}: esperado {e[campo]}, obtido {obtido[campo]}')
-        linha = LINHA_PREVISAO
-        while prev.cell(linha, 2).value not in (None, ''):
-            ano = int(prev.cell(linha, 2).value)
+        previstas = ', '.join(L.COLUNAS_PREVISTAS)
+        linha = L.LINHA_PREVISAO
+        while prev[f'{L.COLUNA_ANO}{linha}'].value not in (None, ''):
+            ano = int(prev[f'{L.COLUNA_ANO}{linha}'].value)
             obs = con.execute("SELECT valor FROM fato_indicador WHERE cod_ibge = ? AND ano = ? AND indicador_id = 'receita_total'",
                               (cod, ano)).fetchone()
-            p = con.execute('SELECT previsto, inferior_80, superior_80, inferior_95, superior_95 FROM previsao_receita_total '
-                            'WHERE cod_ibge = ? AND ano = ?', (cod, ano)).fetchone()
-            pares = [('observada', 3, obs[0] if obs else None)]
-            campos = [('prevista', 4), ('inf80', 5), ('sup80', 6), ('inf95', 7), ('sup95', 8)]
-            pares += [(c, col, v) for (c, col), v in zip(campos, p)] if p else []
+            p = con.execute(f'SELECT {previstas} FROM previsao_receita_total WHERE cod_ibge = ? AND ano = ?', (cod, ano)).fetchone()
+            pares = [('observada', L.COLUNA_OBSERVADA, obs[0] if obs else None)]
+            pares += [(c, col, v) for (c, col), v in zip(L.COLUNAS_PREVISTAS.items(), p)] if p else []
             for campo, col, e in pares:
                 celulas += 1
-                o = prev.cell(linha, col).value
+                o = prev[f'{col}{linha}'].value
                 if not igual(e, o):
                     divergencias.append(f'{nome} | Previsão | {ano} | {campo}: esperado {e}, obtido {o}')
             linha += 1
-        if linha == LINHA_PREVISAO:
-            raise NaoConfere(f'{caminho}: a aba Previsão não tem anos em B{LINHA_PREVISAO} (sem valores calculados?)')
+        if linha == L.LINHA_PREVISAO:
+            raise NaoConfere(f'{caminho}: a aba Previsão não tem anos em {L.COLUNA_ANO}{L.LINHA_PREVISAO} (sem valores calculados?)')
         return nome, celulas, divergencias, e_referencia(wb)
     finally:
         wb.close()
@@ -132,7 +127,7 @@ def conferir_arquivo(caminho, con):
 
 def municipios_padrao(con):
     cod_ex, _ = comum.municipio_de_exemplo()
-    lista = sorted({c['municipio'] for c in ler_conferencia()})
+    lista = sorted({c['municipio'] for c in comum.ler_conferencia()})
     lista.append(con.execute('SELECT municipio FROM dim_municipio WHERE cod_ibge = ?', (cod_ex,)).fetchone()[0])
     return lista
 
@@ -141,6 +136,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('--arquivo', nargs='+', type=Path,
                     help='planilhas calculadas pelo Excel, uma por município (padrão: excel/calculadas/*.xlsx)')
+    # Os testes (tests/test_conferir_excel.py) gravam o resultado numa pasta temporária, para não mexer no versionado.
     ap.add_argument('--resultado', type=Path, default=SAIDA,
                     help='onde gravar o resultado da planilha de referência (padrão: excel/resultado_conferencia_excel.json)')
     args = ap.parse_args()

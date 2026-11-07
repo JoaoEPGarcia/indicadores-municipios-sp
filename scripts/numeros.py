@@ -8,12 +8,16 @@ usados nas figuras, e escreve:
   NUMEROS_CANONICOS.md      uma linha por número: valor, o que é, de onde sai e onde aparece
   README.md                 montado a partir de docs/README.modelo.md, trocando cada {{NumX}} pelo valor
 
+  relatorio/gerados/        linhas de tabela e trechos de código do relatório (scripts/relatorio_gerados.py)
+
 O README não se edita direto: edite docs/README.modelo.md e rode este script.
 Os números ficam sem unidade (o texto escreve "{{NumX}}%" ou "\\NumX\\%").
 Um número que depende de um passo ainda não feito (a conferência no Power BI, a planilha) sai como PENDENTE,
-e o script avisa.
+e o script avisa. A planilha (scripts/montar_excel.py) usa só `calcular_dos_dados()`: os números que saem de
+dados/tratados/, sem o modelo, as páginas do painel nem as conferências.
 """
 import csv
+import datetime
 import json
 import re
 import sqlite3
@@ -25,11 +29,12 @@ import pandas as pd
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / 'scripts'))
 import comum  # noqa: E402
+import relatorio_gerados  # noqa: E402
+import tmdl  # noqa: E402
 # O registro e os marcadores são os mesmos que scripts/verificar_textos.py confere.
 from comum import MACRO, MARCADOR, MODELO_README, NOME_NUMERO, NUMEROS_USADOS, PENDENTE, REGISTRO_TEX  # noqa: E402
 
-TRATADOS = RAIZ / 'dados' / 'tratados'
-TMDL = RAIZ / 'powerbi' / 'painel-municipios-sp.SemanticModel' / 'definition'
+TRATADOS = comum.TRATADOS
 
 # Verbo de cada Indicador para o título da Figura 1 ("Ibirá gasta 18,7% mais com saúde...").
 FRASE_INDICADOR = {
@@ -38,7 +43,11 @@ FRASE_INDICADOR = {
     'educacao_pc': ('gasta', 'com educação por habitante'),
     'dependencia_transf': ('depende', 'de transferências'),
 }
-INDICADORES_FIGURA_1 = ['receita_pc', 'saude_pc', 'educacao_pc', 'dependencia_transf']
+DATA_CONSULTA_FONTES = '14/10/2026'   # dia em que os textos de licença das fontes foram lidos (README, Fontes)
+PAGINAS_PBIR = RAIZ / 'powerbi' / 'painel-municipios-sp.Report' / 'definition' / 'pages' / 'pages.json'
+RESULTADO_PBI = RAIZ / 'powerbi' / 'resultado_conferencia.csv'
+RESULTADO_PBI_COMPLETO = RAIZ / 'powerbi' / 'resultado_conferencia_completa.csv'
+RESULTADO_EXCEL = comum.EXCEL / 'resultado_conferencia_excel.json'
 
 
 # ── grafia ──────────────────────────────────────────────────────────────
@@ -74,17 +83,19 @@ def ler():
     d['quant'] = pd.read_csv(TRATADOS / 'modelo_quantis.csv')
     d['excl'] = pd.read_csv(TRATADOS / 'exclusoes_declaracao.csv')
     con = sqlite3.connect(TRATADOS / 'amostra.sqlite')
-    d['pos'] = pd.read_sql('SELECT cod_ibge, ano, indicador_id, posicao_na_faixa FROM v_posicao', con)
+    try:
+        d['pos'] = pd.read_sql('SELECT cod_ibge, ano, indicador_id, posicao_na_faixa FROM v_posicao', con)
+    finally:
+        con.close()
     return d
 
 
-def ler_tmdl():
-    """Tabelas, relações e medidas do modelo semântico, lidas dos arquivos TMDL."""
-    tabelas = {p.stem: p.read_text(encoding='utf-8') for p in (TMDL / 'tables').glob('*.tmdl')}
-    rel = (TMDL / 'relationships.tmdl').read_text(encoding='utf-8')
-    relacoes = re.findall(r'fromColumn: (\w+)\.\w+\s+toColumn: (\w+)\.\w+', rel)
-    medidas = sum(len(re.findall(r'^\tmeasure ', t, flags=re.M)) for t in tabelas.values())
-    return tabelas, relacoes, medidas
+def ler_resultado(arquivo):
+    """As linhas de um CSV de resultado de conferência, ou None se ele ainda não existe."""
+    if not arquivo.exists():
+        return None
+    with open(arquivo, encoding='utf-8', newline='') as f:
+        return list(csv.DictReader(f))
 
 
 def ultimo_valor(d, cod, ind):
@@ -106,11 +117,37 @@ def ponderada(g, col):
 
 # ── os números ──────────────────────────────────────────────────────────
 def calcular():
+    """Todo o registro, na ordem de relatorio/numeros.tex e de NUMEROS_CANONICOS.md."""
+    d = ler()
+    modelo = tmdl.ler()
+    N = Registro()
+    numeros_da_base(N, d)
+    numeros_dos_dados_do_readme(N, d)
+    numeros_do_painel_e_das_fontes(N)
+    numeros_do_modelo(N, modelo)
+    numeros_da_conferencia_do_painel(N)
+    numeros_do_exemplo(N, d)
+    numeros_do_teste(N, d)
+    numeros_da_conferencia_da_planilha(N)
+    numeros_do_relatorio(N, modelo)
+    return N
+
+
+def calcular_dos_dados():
+    """Só os números que saem de dados/tratados/ (e do município de exemplo, sorteado deles): os que a planilha
+    escreve. Não lê o modelo, as páginas do painel, as conferências nem a planilha, e por isso o construtor
+    da planilha roda antes de tudo isso existir."""
     d = ler()
     N = Registro()
-    mun, fato = d['mun'], d['fato']
+    numeros_da_base(N, d)
+    numeros_dos_dados_do_readme(N, d)
+    numeros_do_exemplo(N, d)
+    numeros_do_teste(N, d)
+    return N
 
-    # Base de dados
+
+def numeros_da_base(N, d):
+    mun, fato = d['mun'], d['fato']
     N.add('NumMunicipios', fmt_int(len(mun)), 'municípios de SP na base')
     N.add('NumIndicadores', len(d['ind']), 'Indicadores definidos por escrito')
     N.add('NumIndicadoresComparaveis', len(comum.INDICADORES_PAINEL), 'Indicadores comparados com a faixa (todos menos a receita total)')
@@ -125,39 +162,52 @@ def calcular():
     N.add('NumAnoPrevInicial', int(d['prev'].ano.min()), 'primeiro ano previsto')
     N.add('NumAnoPrevFinal', int(d['prev'].ano.max()), 'último ano previsto')
     N.add('NumMunicipiosComPrevisao', fmt_int(d['prev'].cod_ibge.nunique()), 'municípios com Previsão da receita')
-    numeros_do_readme(N, d)
 
-    # Modelo semântico
-    tabelas, relacoes, medidas = ler_tmdl()
-    fatos = sorted({f for f, _ in relacoes})
-    dims = sorted({t for _, t in relacoes})
+
+def numeros_dos_dados_do_readme(N, d):
+    """Os números que o README imprime, que saem dos dados e que nenhum outro bloco calcula."""
+    N.add('NumAnoBase', int(d['prev'].ano.min()) - 1, 'ano dos preços dos valores em reais (o anterior ao primeiro ano previsto)')
+    pib = d['fato'][d['fato'].indicador_id == 'pib_pc']
+    N.add('NumAnoFinalPib', int(pib.ano.max()), 'último ano do PIB dos Municípios na base')
+    niveis = sorted(int(n) for n in d['cob'].nivel.unique())
+    N.add('NumNivelMenor', niveis[0], 'nível, em %, do Intervalo de previsão mais estreito', 'scripts/modelo.py')
+    N.add('NumNivelMaior', niveis[-1], 'nível, em %, do Intervalo de previsão mais largo', 'scripts/modelo.py')
+
+
+def numeros_do_painel_e_das_fontes(N):
+    paginas = json.loads(PAGINAS_PBIR.read_text(encoding='utf-8'))['pageOrder']
+    N.add('NumPaginasPainel', len(paginas), 'páginas do painel do Power BI (pageOrder do PBIR)', 'scripts/gerar_relatorio_pbi.py')
+    N.add('NumDataConsultaFontes', DATA_CONSULTA_FONTES, 'data da leitura das condições de uso das fontes (constante registrada aqui)')
+
+
+def numeros_do_modelo(N, modelo):
+    fatos = sorted({f for f, _ in modelo.relacoes})
+    dims = sorted({t for _, t in modelo.relacoes})
     N.add('NumTabelasFato', len(fatos), f'tabelas fato do modelo (lado "muitos" das relações: {", ".join(fatos)})')
     N.add('NumDimensoes', len(dims), f'dimensões do modelo (lado "um": {", ".join(dims)})')
-    N.add('NumRelacoes', len(relacoes), 'relações do modelo, todas 1:N e de direção única')
-    N.add('NumMedidas', medidas, 'medidas DAX no modelo')
+    N.add('NumRelacoes', len(modelo.relacoes), 'relações do modelo, todas 1:N e de direção única')
+    N.add('NumMedidas', len(modelo.medidas), 'medidas DAX no modelo')
 
-    # Conferência das medidas
-    sys.path.insert(0, str(RAIZ / 'scripts'))
-    from conferir_powerbi import ler_conferencia  # noqa: E402
-    celulas = ler_conferencia()
+
+def numeros_da_conferencia_do_painel(N):
+    celulas = comum.ler_conferencia()
     N.add('NumCelulasConferencia', len(celulas), 'células de powerbi/conferencia.md (valor esperado de uma medida)', 'scripts/conferir_powerbi.py')
     N.add('NumMunicipiosConferencia', len({c['municipio'] for c in celulas}), 'municípios sorteados para a conferência', 'scripts/gerar_conferencia.py')
-    res = RAIZ / 'powerbi' / 'resultado_conferencia.csv'
-    if res.exists():
-        r = list(csv.DictReader(open(res, encoding='utf-8')))
-        N.add('NumCelulasBatem', sum(int(x['bate']) for x in r), 'células em que a medida DAX devolveu o valor esperado', 'scripts/conferir_powerbi.py')
-    else:
-        N.add('NumCelulasBatem', PENDENTE, 'células em que a medida DAX devolveu o valor esperado', 'scripts/conferir_powerbi.py')
-    comp = RAIZ / 'powerbi' / 'resultado_conferencia_completa.csv'
-    if comp.exists():
-        r = list(csv.DictReader(open(comp, encoding='utf-8')))
+    r = ler_resultado(RESULTADO_PBI)
+    N.add('NumCelulasBatem', sum(int(x['bate']) for x in r) if r is not None else PENDENTE,
+          'células em que a medida DAX devolveu o valor esperado', 'scripts/conferir_powerbi.py')
+    r = ler_resultado(RESULTADO_PBI_COMPLETO)
+    if r is not None:
         N.add('NumCelulasCompletas', fmt_int(sum(int(x['celulas']) for x in r)), 'células da conferência completa (3 medidas × município × ano × Indicador)', 'scripts/conferir_powerbi.py')
         N.add('NumDivergenciasCompletas', sum(int(x['divergentes']) for x in r), 'divergências entre DAX e SQLite na conferência completa', 'scripts/conferir_powerbi.py')
     else:
         N.add('NumCelulasCompletas', PENDENTE, 'células da conferência completa', 'scripts/conferir_powerbi.py')
         N.add('NumDivergenciasCompletas', PENDENTE, 'divergências entre DAX e SQLite na conferência completa', 'scripts/conferir_powerbi.py')
 
-    # Município de exemplo
+
+def numeros_do_exemplo(N, d):
+    """O município de exemplo e os números das Figuras 1 a 3, que o mostram."""
+    mun, fato = d['mun'], d['fato']
     cod, candidatos = comum.municipio_de_exemplo()
     m = mun.set_index('cod_ibge').loc[cod]
     faixa = m.faixa_porte
@@ -169,7 +219,7 @@ def calcular():
 
     # Figura 1: o Indicador com a maior diferença para a mediana
     ult = {i: ultimo_valor(d, cod, i) for i in comum.INDICADORES_PAINEL}
-    dif = {i: ult[i]['valor'] / ult[i]['mediana'] - 1 for i in INDICADORES_FIGURA_1}
+    dif = {i: ult[i]['valor'] / ult[i]['mediana'] - 1 for i in comum.INDICADORES_RESUMO}
     foco = max(dif, key=lambda i: abs(dif[i]))
     verbo, objeto = FRASE_INDICADOR[foco]
     N.add('NumFigUmVerbo', verbo, 'verbo do título da Figura 1 (segue o Indicador de maior diferença)')
@@ -201,61 +251,91 @@ def calcular():
     N.add('NumExemploInfNoventaCinco', fmt(p.inferior_95[af], 1), 'limite inferior do Intervalo de previsão de 95%')
     N.add('NumExemploSupNoventaCinco', fmt(p.superior_95[af], 1), 'limite superior do Intervalo de previsão de 95%')
 
-    # Figura 4 e texto: Teste contra o passado
+
+def numeros_do_teste(N, d):
+    """Figura 4 e texto: o Teste contra o passado, por método, horizonte e nível do Intervalo de previsão."""
     met = d['met'].set_index(['metodo', 'horizonte'])
-    for metodo, nome in [('tendencia3', 'Escolhido'), ('ingenuo', 'Ingenuo'), ('tendencia5', 'Reta')]:
-        for h, hn in [(1, 'Um'), (2, 'Dois'), (3, 'Tres')]:
+    ultimo = max(comum.MACRO_HORIZONTE)
+    for metodo, nome in comum.macros_dos_metodos().items():
+        for h, hn in comum.MACRO_HORIZONTE.items():
             N.add(f'NumErro{nome}{hn}', fmt(met.erro_medio_abs_pct[(metodo, h)], 1),
                   f'erro médio absoluto, em %, do método {metodo} a {h} ano(s)', 'scripts/modelo.py')
-        N.add(f'NumVies{nome}Tres', ('+' if met.vies_pct[(metodo, 3)] > 0 else '−') + fmt(abs(met.vies_pct[(metodo, 3)]), 1),
-              f'viés médio, em %, do método {metodo} a 3 anos', 'scripts/modelo.py')
-    N.add('NumOrigensTeste', d['cob'].origem_fora.nunique(), 'anos de origem do Teste contra o passado', 'scripts/modelo.py')
-    N.add('NumOrigemInicial', int(d['cob'].origem_fora.min()), 'primeira origem do Teste contra o passado', 'scripts/modelo.py')
-    N.add('NumOrigemFinal', int(d['cob'].origem_fora.max()), 'última origem do Teste contra o passado', 'scripts/modelo.py')
+        vies = met.vies_pct[(metodo, ultimo)]
+        N.add(f'NumVies{nome}{comum.MACRO_HORIZONTE[ultimo]}', ('+' if vies > 0 else '−') + fmt(abs(vies), 1),
+              f'viés médio, em %, do método {metodo} a {ultimo} anos', 'scripts/modelo.py')
     cob = d['cob']
-    for nivel, nn in [(80, 'Oitenta'), (95, 'NoventaCinco')]:
+    N.add('NumOrigensTeste', cob.origem_fora.nunique(), 'anos de origem do Teste contra o passado', 'scripts/modelo.py')
+    N.add('NumOrigemInicial', int(cob.origem_fora.min()), 'primeira origem do Teste contra o passado', 'scripts/modelo.py')
+    N.add('NumOrigemFinal', int(cob.origem_fora.max()), 'última origem do Teste contra o passado', 'scripts/modelo.py')
+    for nivel in sorted(int(n) for n in cob.nivel.unique()):
+        nn = comum.MACRO_NIVEL[nivel]
         g = cob[cob.nivel == nivel]
         N.add(f'NumCob{nn}Sem', fmt(ponderada(g, 'cobertura_sem_ajuste'), 0), f'cobertura do intervalo de {nivel}% sem ajuste, em %', 'scripts/modelo.py')
         N.add(f'NumCob{nn}Com', fmt(ponderada(g, 'cobertura_com_ajuste'), 0), f'cobertura do intervalo de {nivel}% depois do ajuste, em %', 'scripts/modelo.py')
-        por_origem = {o: ponderada(gg, 'cobertura_com_ajuste') for o, gg in g.groupby('origem_fora')}
+        por_origem = comum.cobertura_por_origem(nivel)
         pior = min(por_origem, key=por_origem.get)
         N.add(f'NumCob{nn}Pior', fmt(por_origem[pior], 0), f'cobertura do intervalo de {nivel}% na pior origem deixada de fora, depois do ajuste, em %', 'scripts/modelo.py')
         N.add(f'NumCob{nn}PiorOrigem', int(pior), f'a pior origem deixada de fora para o intervalo de {nivel}%', 'scripts/modelo.py')
         esc = d['quant'][d['quant'].nivel == nivel].escala.unique()
         N.add(f'NumEscala{nn}', fmt(float(esc[0]), 2), f'fator de alargamento do intervalo de {nivel}%', 'scripts/modelo.py')
 
-    # Planilha (preenchido por scripts/conferir_excel.py)
-    planilha = RAIZ / 'excel' / 'resultado_conferencia_excel.json'
-    if planilha.exists():
-        r = json.loads(planilha.read_text(encoding='utf-8'))
-        N.add('NumCelulasExcel', fmt_int(r['celulas']), 'células da aba Painel conferidas contra o SQLite', 'scripts/conferir_excel.py')
-        N.add('NumCelulasExcelBatem', fmt_int(r['batem']), 'células da aba Painel iguais ao SQLite', 'scripts/conferir_excel.py')
-        N.add('NumMunicipiosExcel', r['municipios'], 'municípios testados na planilha', 'scripts/conferir_excel.py')
-    else:
-        for nome, desc in [('NumCelulasExcel', 'células da aba Painel conferidas contra o SQLite'),
-                           ('NumCelulasExcelBatem', 'células da aba Painel iguais ao SQLite'),
-                           ('NumMunicipiosExcel', 'municípios testados na planilha')]:
-            N.add(nome, PENDENTE, desc, 'scripts/conferir_excel.py')
-    numeros_do_relatorio(N)
-    return N
+
+def numeros_da_conferencia_da_planilha(N):
+    """Lidos do resultado que scripts/conferir_excel.py grava."""
+    r = json.loads(RESULTADO_EXCEL.read_text(encoding='utf-8')) if RESULTADO_EXCEL.exists() else None
+    for nome, chave, desc in [('NumCelulasExcel', 'celulas', 'células da aba Painel conferidas contra o SQLite'),
+                              ('NumCelulasExcelBatem', 'batem', 'células da aba Painel iguais ao SQLite'),
+                              ('NumMunicipiosExcel', 'municipios', 'municípios testados na planilha')]:
+        valor = PENDENTE if r is None else (r[chave] if chave == 'municipios' else fmt_int(r[chave]))
+        N.add(nome, valor, desc, 'scripts/conferir_excel.py')
 
 
-# ── números que só o README usa (ticket 06) ─────────────────────────────
-DATA_CONSULTA_FONTES = '14/10/2026'   # dia em que os textos de licença das fontes foram lidos (README, Fontes)
-PAGINAS_PBIR = RAIZ / 'powerbi' / 'painel-municipios-sp.Report' / 'definition' / 'pages' / 'pages.json'
+def numeros_do_relatorio(N, modelo):
+    """Os números que só o relatório em LaTeX usa: a data da capa, a regra da declaração, as linhas de cada tabela
+    do modelo, as medidas por pasta de exibição, a conferência da base e o tamanho do Teste contra o passado."""
+    hoje = datetime.date.today()
+    N.add('NumMesCapa', comum.MESES[hoje.month - 1], 'mês da capa do relatório (o mês em que o registro foi gerado)')
+    N.add('NumAnoCapa', hoje.year, 'ano da capa do relatório (o ano em que o registro foi gerado)')
 
+    sql = (RAIZ / 'sql' / '20_indicadores.sql').read_text(encoding='utf-8')
+    baixo, alto = re.search(r'rc_liq\s*/\s*rc_liq_outros\s*<\s*([\d.]+)\s*OR\s*rc_liq\s*/\s*rc_liq_outros\s*>\s*([\d.]+)',
+                            sql).groups()
+    if abs(float(baixo) * float(alto) - 1) > 1e-9:
+        raise ValueError(f'a regra da declaração deixou de ser simétrica ({baixo} e {alto}): reescreva o texto')
+    N.add('NumRegraFator', fmt_int(float(alto)), 'quantas vezes acima ou abaixo da média dos outros anos o valor sai',
+          'sql/20_indicadores.sql')
 
-def numeros_do_readme(N, d):
-    """Os números que o README imprime e que nenhum outro bloco calcula."""
-    N.add('NumAnoBase', int(d['prev'].ano.min()) - 1, 'ano dos preços dos valores em reais (o anterior ao primeiro ano previsto)')
-    pib = d['fato'][d['fato'].indicador_id == 'pib_pc']
-    N.add('NumAnoFinalPib', int(pib.ano.max()), 'último ano do PIB dos Municípios na base')
-    paginas = json.loads(PAGINAS_PBIR.read_text(encoding='utf-8'))['pageOrder']
-    niveis = sorted(int(n) for n in d['cob'].nivel.unique())
-    N.add('NumNivelMenor', niveis[0], 'nível, em %, do Intervalo de previsão mais estreito', 'scripts/modelo.py')
-    N.add('NumNivelMaior', niveis[-1], 'nível, em %, do Intervalo de previsão mais largo', 'scripts/modelo.py')
-    N.add('NumPaginasPainel', len(paginas), 'páginas do painel do Power BI (pageOrder do PBIR)', 'scripts/gerar_relatorio_pbi.py')
-    N.add('NumDataConsultaFontes', DATA_CONSULTA_FONTES, 'data da leitura das condições de uso das fontes (constante registrada aqui)')
+    linhas = {t: len(pd.read_csv(TRATADOS / arq)) for t, _, _, arq, _ in tmdl.TABELAS_MODELO if arq}
+    N.add('NumLinhasRefFaixa', fmt_int(linhas['ref_faixa']), 'linhas de ref_faixa (Faixa de porte × ano × Indicador)')
+    N.add('NumLinhasPrevisao', fmt_int(linhas['previsao']), 'linhas de previsao (município × ano previsto)')
+    anos_fim = max(int(N['NumAnoFinal']['valor']), int(N['NumAnoPrevFinal']['valor']))
+    N.add('NumLinhasDimAno', anos_fim - int(N['NumAnoInicial']['valor']) + 1,
+          'linhas de dim_ano (do primeiro ano dos dados ao último previsto)')
+
+    pastas = modelo.pastas()
+    N.add('NumPastasMedidas', len(pastas), 'pastas de exibição das medidas DAX')
+    for pasta, medidas in pastas.items():
+        N.add(f'NumMedidasPasta{comum.parte_de_macro(pasta)}', len(medidas), f'medidas DAX na pasta "{pasta}"')
+
+    r = ler_resultado(RESULTADO_PBI_COMPLETO)
+    N.add('NumMedidasCompletas', len(r) if r is not None else PENDENTE,
+          'medidas conferidas em cada linha da fato na conferência completa', 'scripts/conferir_powerbi.py')
+
+    val = (TRATADOS / 'validacao.txt').read_text(encoding='utf-8')
+    comparados = re.findall(r'^\[OK\] \w+: SQL = pandas: (\d+) valores, só no SQL (\d+), só no pandas (\d+), '
+                            r'maior diferença (\S+)$', val, re.M)
+    total = sum(int(c[0]) for c in comparados)
+    iguais = sum(int(c[0]) for c in comparados if c[1] == c[2] == '0' and float(c[3]) == 0)
+    N.add('NumValoresValidados', fmt_int(total), 'valores dos Indicadores refeitos em pandas e comparados com o SQL', 'scripts/validar.py')
+    N.add('NumValoresValidadosIguais', fmt_int(iguais), 'desses, os iguais ao SQL (diferença máxima zero)', 'scripts/validar.py')
+
+    met = pd.read_csv(TRATADOS / 'backtest_metodos.csv')
+    janelas = {m: int(re.sub(r'\D', '', m)) for m in met.metodo.unique() if re.search(r'\d', m)}
+    metodo_de = {papel: m for m, papel in comum.macros_dos_metodos().items()}
+    N.add('NumMetodos', met.metodo.nunique(), 'métodos de previsão testados contra o passado', 'scripts/modelo.py')
+    N.add('NumHorizontes', int(met.horizonte.max()), 'anos à frente da Previsão da receita e do Teste contra o passado', 'scripts/modelo.py')
+    N.add('NumJanelaEscolhido', janelas[metodo_de['Escolhido']], 'anos da tendência do método escolhido', 'scripts/modelo.py')
+    N.add('NumJanelaReta', janelas[metodo_de['Reta']], 'anos da reta do método concorrente', 'scripts/modelo.py')
 
 
 # ── saídas ──────────────────────────────────────────────────────────────
@@ -316,217 +396,9 @@ def escrever_readme(N):
     (RAIZ / 'README.md').write_text(texto, encoding='utf-8')
 
 
-# ══ Relatório em LaTeX (ticket 07) ═════════════════════════════════════
-# Os números que só o relatório usa e os arquivos que ele lê de relatorio/gerados/: linhas de tabela
-# (com \linhasde) e trechos de código (com \input), todos com a primeira linha "% GERADO". As linhas de
-# tabela usam as macros \Num... em vez do valor, para que "Onde aparece" as encontre.
-GERADOS = RAIZ / 'relatorio' / 'gerados'
-PLANILHA = RAIZ / 'excel' / 'painel-municipios-sp.xlsx'
-CABECALHO_GERADO = '% GERADO por scripts/numeros.py. Não edite à mão: rode o script de novo.'
-MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro',
-         'Outubro', 'Novembro', 'Dezembro']
-# Funções da planilha como o Excel em português as mostra (o arquivo as guarda em inglês).
-FUNCOES_PT = {'XLOOKUP': 'PROCX', 'IF': 'SE', 'AND': 'E', 'ISNUMBER': 'ÉNÚM', 'SUMPRODUCT': 'SOMARPRODUTO',
-              'MAXIFS': 'MÁXIMOSES', 'NA': 'NÃO.DISP', 'SEQUENCE': 'SEQUÊNCIA', 'MATCH': 'CORRESP', 'LET': 'LET'}
-# Papel e grão de cada tabela do modelo estrela, e o CSV que ela lê (dim_ano é calculada no modelo).
-TABELAS_MODELO = [
-    ('fato_indicador', 'fato', 'município, ano e Indicador', 'indicadores_longo.csv'),
-    ('ref_faixa', 'fato', 'Faixa de porte, ano e Indicador', 'referencia_faixa.csv'),
-    ('previsao', 'fato', 'município e ano previsto', 'previsao_receita_total.csv'),
-    ('dim_municipio', 'dimensão', 'município', 'dim_municipio.csv'),
-    ('dim_indicador', 'dimensão', 'Indicador', 'dim_indicador.csv'),
-    ('dim_ano', 'dimensão', 'ano', None),
-]
-NOME_METODO = {'ingenuo': 'Repetir o último valor', 'tendencia': 'Tendência dos {} últimos anos',
-               'reta': 'Reta dos {} últimos anos'}
-
-
-def _camel(texto):
-    """'Comparação na faixa' → 'ComparacaoNaFaixa': parte de nome de macro (só letras)."""
-    import unicodedata
-    sem_acento = unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode()
-    return ''.join(p[:1].upper() + p[1:] for p in re.findall(r'[A-Za-z]+', sem_acento))
-
-
-def _tt(nome):
-    return r'\texttt{' + nome.replace('_', r'\_') + '}'
-
-
-def medidas_por_pasta():
-    """{pasta de exibição sem o número de ordem: [medidas]}, na ordem do TMDL."""
-    texto = (TMDL / 'tables' / 'Medidas.tmdl').read_text(encoding='utf-8')
-    pastas = {}
-    for bloco in re.split(r'(?=^\tmeasure )', texto, flags=re.M)[1:]:
-        nome = re.match(r"\tmeasure (?:'([^']+)'|(\S+))", bloco)
-        pasta = re.search(r'^\t\tdisplayFolder: (?:\d+\.\s*)?(.+)$', bloco, re.M).group(1).strip()
-        pastas.setdefault(pasta, []).append(nome.group(1) or nome.group(2))
-    return pastas
-
-
-def numeros_do_relatorio(N):
-    import datetime
-    hoje = datetime.date.today()
-    N.add('NumMesCapa', MESES[hoje.month - 1], 'mês da capa do relatório (o mês em que o registro foi gerado)')
-    N.add('NumAnoCapa', hoje.year, 'ano da capa do relatório (o ano em que o registro foi gerado)')
-
-    sql = (RAIZ / 'sql' / '20_indicadores.sql').read_text(encoding='utf-8')
-    baixo, alto = re.search(r'rc_liq\s*/\s*rc_liq_outros\s*<\s*([\d.]+)\s*OR\s*rc_liq\s*/\s*rc_liq_outros\s*>\s*([\d.]+)',
-                            sql).groups()
-    if abs(float(baixo) * float(alto) - 1) > 1e-9:
-        raise ValueError(f'a regra da declaração deixou de ser simétrica ({baixo} e {alto}): reescreva o texto')
-    N.add('NumRegraFator', fmt_int(float(alto)), 'quantas vezes acima ou abaixo da média dos outros anos o valor sai',
-          'sql/20_indicadores.sql')
-
-    linhas = {t: len(pd.read_csv(TRATADOS / arq)) for t, _, _, arq in TABELAS_MODELO if arq}
-    N.add('NumLinhasRefFaixa', fmt_int(linhas['ref_faixa']), 'linhas de ref_faixa (Faixa de porte × ano × Indicador)')
-    N.add('NumLinhasPrevisao', fmt_int(linhas['previsao']), 'linhas de previsao (município × ano previsto)')
-    anos_fim = max(int(N['NumAnoFinal']['valor']), int(N['NumAnoPrevFinal']['valor']))
-    N.add('NumLinhasDimAno', anos_fim - int(N['NumAnoInicial']['valor']) + 1,
-          'linhas de dim_ano (do primeiro ano dos dados ao último previsto)')
-
-    pastas = medidas_por_pasta()
-    N.add('NumPastasMedidas', len(pastas), 'pastas de exibição das medidas DAX')
-    for pasta, medidas in pastas.items():
-        N.add(f'NumMedidasPasta{_camel(pasta)}', len(medidas), f'medidas DAX na pasta "{pasta}"')
-
-    comp = RAIZ / 'powerbi' / 'resultado_conferencia_completa.csv'
-    N.add('NumMedidasCompletas', len(list(csv.DictReader(open(comp, encoding='utf-8')))) if comp.exists() else PENDENTE,
-          'medidas conferidas em cada linha da fato na conferência completa', 'scripts/conferir_powerbi.py')
-
-    val = (TRATADOS / 'validacao.txt').read_text(encoding='utf-8')
-    comparados = re.findall(r'^\[OK\] \w+: SQL = pandas: (\d+) valores, só no SQL (\d+), só no pandas (\d+), '
-                            r'maior diferença (\S+)$', val, re.M)
-    total = sum(int(c[0]) for c in comparados)
-    iguais = sum(int(c[0]) for c in comparados if c[1] == c[2] == '0' and float(c[3]) == 0)
-    N.add('NumValoresValidados', fmt_int(total), 'valores dos Indicadores refeitos em pandas e comparados com o SQL', 'scripts/validar.py')
-    N.add('NumValoresValidadosIguais', fmt_int(iguais), 'desses, os iguais ao SQL (diferença máxima zero)', 'scripts/validar.py')
-
-    met = pd.read_csv(TRATADOS / 'backtest_metodos.csv')
-    janelas = {m: int(re.sub(r'\D', '', m)) for m in met.metodo.unique() if re.search(r'\d', m)}
-    N.add('NumMetodos', met.metodo.nunique(), 'métodos de previsão testados contra o passado', 'scripts/modelo.py')
-    N.add('NumHorizontes', int(met.horizonte.max()), 'anos à frente da Previsão da receita e do Teste contra o passado', 'scripts/modelo.py')
-    N.add('NumJanelaEscolhido', janelas['tendencia3'], 'anos da tendência do método escolhido', 'scripts/modelo.py')
-    N.add('NumJanelaReta', janelas['tendencia5'], 'anos da reta do método concorrente', 'scripts/modelo.py')
-
-
-def formula_da_planilha(aba, celula):
-    """A fórmula de uma célula da planilha gerada, como o Excel em português a mostra: PROCX no lugar de
-    XLOOKUP, ponto e vírgula entre os argumentos, sem os prefixos _xlfn. e _xlpm. do arquivo."""
-    import openpyxl
-    v = openpyxl.load_workbook(PLANILHA)[aba][celula].value
-    f = getattr(v, 'text', v).replace('_xlfn.', '').replace('_xlpm.', '')
-    saida, i, colchete = [], 0, 0
-    while i < len(f):
-        c = f[i]
-        if c == '"':                                   # texto: copia até as aspas de fechamento
-            fim = f.index('"', i + 1)
-            saida.append(f[i:fim + 1])
-            i = fim + 1
-            continue
-        m = None if colchete else re.match(r'[A-Z][A-Z.]*(?=\()', f[i:])
-        if m and (i == 0 or not re.match(r'[\w.]', f[i - 1])):
-            saida.append(FUNCOES_PT.get(m.group(0), m.group(0)))
-            i += len(m.group(0))
-            continue
-        colchete += (c == '[') - (c == ']')
-        saida.append(';' if c == ',' and not colchete else c)
-        i += 1
-    return ''.join(saida)
-
-
-def quebrar_formula(f):
-    """A fórmula em várias linhas, para caber na página: um argumento por linha na função de fora (no LET,
-    um nome e o seu valor por linha), alinhados depois do parêntese."""
-    abre = f.index('(')
-    args, atual, prof, texto = [], '', 0, False
-    for c in f[abre + 1:-1]:
-        texto ^= c == '"'
-        if not texto:
-            prof += (c == '(') - (c == ')')
-        if c == ';' and prof == 0 and not texto:
-            args.append(atual.strip())
-            atual = ''
-        else:
-            atual += c
-    args.append(atual.strip())
-    if f[:abre].endswith('LET'):
-        args = ['; '.join(args[k:k + 2]) for k in range(0, len(args) - 1, 2)] + [args[-1]]
-    recuo = ' ' * (abre + 1)
-    return f[:abre + 1] + (';\n' + recuo).join(args) + ')'
-
-
-def medida_dax(nome):
-    """A expressão de uma medida, lida do TMDL, sem os comentários de linha e com dois espaços de recuo."""
-    texto = (TMDL / 'tables' / 'Medidas.tmdl').read_text(encoding='utf-8')
-    m = re.search(r"^\tmeasure '" + re.escape(nome) + r"' =(.*)\n((?:\t\t\t.*\n|[ \t]*\n)*)", texto, re.M)
-    corpo = [l[3:].replace('\t', '  ') for l in m.group(2).splitlines()
-             if l.strip() and not l.strip().startswith('--')]
-    return '\n'.join([f'{nome} ={m.group(1)}'.rstrip()] + ['  ' + l for l in corpo])
-
-
-def _codigo(destino, codigo):
-    destino.write_text('\n'.join([CABECALHO_GERADO, r'\begin{verbatim}', codigo, r'\end{verbatim}']) + '\n',
-                       encoding='utf-8')
-
-
-def _linhas(destino, linhas):
-    destino.write_text('\n'.join([CABECALHO_GERADO] + [l + r' \\' for l in linhas]) + '\n', encoding='utf-8')
-
-
-def escrever_gerados_relatorio(N):
-    GERADOS.mkdir(parents=True, exist_ok=True)
-    _, relacoes, _ = ler_tmdl()
-    liga = {}
-    for f, d in relacoes:
-        liga.setdefault(f, []).append(d)
-        liga.setdefault(d, []).append(f)
-    papeis = {t: p for t, p, _, _ in TABELAS_MODELO}
-    if set(liga) != set(papeis) or any((papeis[f], papeis[d]) != ('fato', 'dimensão') for f, d in relacoes):
-        raise ValueError('as relações do TMDL não batem com TABELAS_MODELO: atualize a lista')
-    macro_linhas = {'fato_indicador': r'\NumLinhasFato', 'ref_faixa': r'\NumLinhasRefFaixa',
-                    'previsao': r'\NumLinhasPrevisao', 'dim_municipio': r'\NumMunicipios',
-                    'dim_indicador': r'\NumIndicadores', 'dim_ano': r'\NumLinhasDimAno'}
-    _linhas(GERADOS / 'tabelas_modelo.tex', [
-        f'{_tt(t)} & {p} & {g} & {macro_linhas[t]} & ' + ', '.join(_tt(x) for x in sorted(liga[t]))
-        for t, p, g, _ in TABELAS_MODELO])
-
-    _linhas(GERADOS / 'pastas_medidas.tex', [
-        f'{pasta} & \\NumMedidasPasta{_camel(pasta)} & ' + '; '.join(medidas[:3])
-        + ('; \\ldots' if len(medidas) > 3 else '')
-        for pasta, medidas in medidas_por_pasta().items()])
-
-    _linhas(GERADOS / 'conferencias.tex', [
-        r'Indicadores: SQL e pandas & cada valor refeito em pandas, sem olhar o SQL & \NumValoresValidados & \NumValoresValidadosIguais',
-        r'Medidas DAX e tabela de conferência & valores esperados de \NumMunicipiosConferencia{} municípios sorteados & \NumCelulasConferencia & \NumCelulasBatem',
-        r'Medidas DAX e SQLite & \NumMedidasCompletas{} medidas em cada linha da fato & \NumCelulasCompletas & \NumDivergenciasCompletas{} divergências',
-        r'Planilha e SQLite & aba Painel calculada no Excel para a web, \NumMunicipiosExcel{} municípios & \NumCelulasExcel & \NumCelulasExcelBatem',
-    ])
-
-    met = pd.read_csv(TRATADOS / 'backtest_metodos.csv')
-    linhas = []
-    for metodo, nome, rotulo in [('ingenuo', 'Ingenuo', NOME_METODO['ingenuo']),
-                                 ('tendencia3', 'Escolhido', NOME_METODO['tendencia'].format(r'\NumJanelaEscolhido{}')),
-                                 ('tendencia5', 'Reta', NOME_METODO['reta'].format(r'\NumJanelaReta{}'))]:
-        escolhido = bool(met[met.metodo == metodo].escolhido.max())
-        celulas = ([rotulo + (' (escolhido)' if escolhido else '')]
-                   + [f'\\NumErro{nome}{h}\\%' for h in ('Um', 'Dois', 'Tres')] + [f'\\NumVies{nome}Tres\\%'])
-        linhas.append(' & '.join(f'\\textbf{{{c}}}' if escolhido else c for c in celulas))
-    _linhas(GERADOS / 'teste_metodos.tex', linhas)
-
-    _linhas(GERADOS / 'cobertura.tex', [
-        f'\\NumNivel{nivel}\\% & \\NumCob{nn}Sem\\% & \\NumEscala{nn} & \\NumCob{nn}Com\\% & '
-        f'\\NumCob{nn}Pior\\% (origem \\NumCob{nn}PiorOrigem)' for nn, nivel in (('Oitenta', 'Menor'), ('NoventaCinco', 'Maior'))])
-
-    _codigo(GERADOS / 'dax_mediana.tex', medida_dax('Mediana da faixa'))
-    _codigo(GERADOS / 'dax_posicao.tex', medida_dax('Posição na faixa'))
-    _codigo(GERADOS / 'excel_procx.tex', quebrar_formula(formula_da_planilha('Painel', 'E13')))
-    _codigo(GERADOS / 'excel_let.tex', quebrar_formula(formula_da_planilha('Painel', 'D13')))
-# ══ fim do relatório em LaTeX ══════════════════════════════════════════
-
-
 def main():
     N = calcular()
-    escrever_gerados_relatorio(N)
+    relatorio_gerados.escrever()
     onde = onde_aparece(N)
     escrever_tex(N)
     escrever_canonicos(N, onde)
