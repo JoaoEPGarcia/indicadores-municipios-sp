@@ -443,6 +443,20 @@
               }
             }
           }
+        },
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "Medidas.Receita observada"
+          }
         }
       ],
       "categoryAxis": [
@@ -546,7 +560,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'R$ milhões, a preços de 2025. O eixo vertical não começa no zero.'"
+                  "Value": "'R$ milhões, a preços de 2025. A linha com pontos é a receita observada. O eixo vertical não começa no zero.'"
                 }
               }
             },

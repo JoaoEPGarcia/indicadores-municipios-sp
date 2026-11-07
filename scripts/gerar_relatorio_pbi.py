@@ -207,7 +207,8 @@ def caixa_de_texto(nome, caixa, texto_alternativo, linhas, *, ordem, tamanho=10,
 
 def titulo_da_pagina(nome, texto):
     """Título da página: caixa de texto em Lato Bold 20, a primeira coisa que o leitor de tela lê."""
-    return caixa_de_texto(nome, (24, 16, 900, 40), f'Título da página: {texto}', [texto],
+    # 48 de altura: com 40, o Lato Bold 20 transborda e a caixa ganha barra de rolagem
+    return caixa_de_texto(nome, (24, 12, 900, 48), f'Título da página: {texto}', [texto],
                           ordem=0, tamanho=20, negrito=True)
 
 
@@ -452,7 +453,8 @@ def pagina_previsao(c):
                'Gráfico de linhas: a receita corrente observada do município e a prevista para os próximos anos, '
                f'com os Intervalos de previsão de {" e de ".join(f"{n}%" for n in c["niveis"])}.',
                ordem=2, titulo='Receita corrente observada e prevista, com os Intervalos de previsão',
-               subtitulo=f'R$ milhões, a preços de {base}. O eixo vertical não começa no zero.',
+               subtitulo=f'R$ milhões, a preços de {base}. A linha com pontos é a receita observada. '
+                         'O eixo vertical não começa no zero.',
                papeis={'Category': [projecao(ANO, ativa=True)],
                        'Y': [projecao(obs, 'Observada'), projecao(prev, 'Prevista'),
                              projecao(i80, 'Limite inferior 80%'), projecao(s80, 'Limite superior 80%'),
@@ -468,7 +470,10 @@ def pagina_previsao(c):
                                   estilo_de_linha(i80, 1), estilo_de_linha(s80, 1),
                                   estilo_de_linha(i95, 1, tracejado='dotted'), estilo_de_linha(s95, 1, tracejado='dotted')],
                    'legend': [{'properties': {'show': lit(False)}}],
-                   'seriesLabels': [{'properties': {'show': lit(True)}}],
+                   # sem rótulo na observada: o Desktop o põe na altura do último valor (2025), na borda direita,
+                   # onde parece nomear o limite inferior de 80% e esconde o rótulo dele
+                   'seriesLabels': [{'properties': {'show': lit(True)}},
+                                    {'properties': {'show': lit(False)}, 'selector': {'metadata': ref(obs)}}],
                    'categoryAxis': [EIXO_DE_ANOS],
                    'valueAxis': [{'properties': {'showAxisTitle': lit(False)}}],
                }),

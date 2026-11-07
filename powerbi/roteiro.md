@@ -154,7 +154,7 @@ Abra o relatório e atualize. As segmentações já abrem no estado de cada capt
 
 Como exportar:
 
-1. **Páginas 1 a 4:** **Arquivo → Exportar → Exportar para PDF**, salvando `powerbi/capturas/paginas.pdf`. Depois rode `.venv\Scripts\python scripts\capturas.py`, que corta o PDF em um PNG por página, com os nomes da tabela.
-2. **Visão de modelo:** o Desktop não exporta essa visão. Use **Win + Shift + S**, recorte a área do diagrama e salve como `powerbi/capturas/05-modelo.png`.
+1. **Páginas 1 a 4:** **Arquivo → Exportar → Exportar para PDF**. O Desktop não pergunta onde salvar: abre o PDF no navegador, a partir de `%LOCALAPPDATA%\Temp\Power BI Desktop\print-job-…\`; salve-o (ou copie de lá) como `powerbi/capturas/paginas.pdf`. Depois rode `.venv\Scripts\python scripts\capturas.py`, que corta o PDF em um PNG por página, com os nomes da tabela.
+2. **Visão de modelo:** a posição de cada tabela vem de `painel-municipios-sp.SemanticModel/diagramLayout.json`, escrito à parte para que todas apareçam sem sobreposição. Não salve o PBIP no Desktop só para mexer nessa visão: o Desktop regrava todos os arquivos do modelo e do relatório no formato dele. O Desktop não exporta essa visão. Use **Win + Shift + S**, recorte a área do diagrama e salve como `powerbi/capturas/05-modelo.png`.
 
 Depois das capturas, avise: o README e o relatório só passam a mostrar o painel a partir daí, e dizem que os visuais são definidos em código (PBIR) sobre modelo em TMDL.
