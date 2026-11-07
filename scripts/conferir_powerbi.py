@@ -8,9 +8,9 @@ O Desktop sobe um Analysis Services local numa porta que muda a cada abertura; o
 arquivo msmdsrv.port.txt da pasta de workspaces e manda as consultas DAX para lá.
 
 Para falar com esse servidor o script usa a biblioteca ADOMD.NET, pelo pythonnet. Ela vem dentro do
-Power BI Desktop (Microsoft.PowerBI.AdomdClient.dll, na pasta bin). Se o seu Desktop for o da Microsoft Store
-e a pasta não puder ser lida, instale o ADOMD.NET (pacote "Microsoft.AnalysisServices.AdomdClient") e aponte a
-variável de ambiente ADOMD_DLL para a DLL. Sem ADOMD, o script tenta o provedor OLE DB MSOLAP (pywin32).
+Power BI Desktop (Microsoft.PowerBI.AdomdClient.dll, na pasta bin); no Desktop da Microsoft Store o script
+pede ao Windows a pasta do pacote. Se mesmo assim não achar, instale o ADOMD.NET (pacote
+"Microsoft.AnalysisServices.AdomdClient") e aponte a variável de ambiente ADOMD_DLL para a DLL. Sem ADOMD, o script tenta o provedor OLE DB MSOLAP (pywin32).
 
 Saídas (versionadas, porque os números do README e do relatório saem delas):
   powerbi/resultado_conferencia.csv           uma linha por célula conferida
@@ -24,6 +24,7 @@ import math
 import os
 import re
 import sqlite3
+import subprocess
 import sys
 from pathlib import Path
 
@@ -114,10 +115,25 @@ def achar_porta():
     return int(texto.strip().strip('\ufeff'))
 
 
+def pasta_desktop_da_store():
+    """Pasta de instalação do Desktop da Microsoft Store. A pasta WindowsApps não deixa listar o conteúdo
+    (então o glob não a acha), mas a pasta do pacote se lê quando se sabe o nome, que o Windows informa."""
+    try:
+        saida = subprocess.run(
+            ['powershell', '-NoProfile', '-Command',
+             '(Get-AppxPackage -Name Microsoft.MicrosoftPowerBIDesktop).InstallLocation'],
+            capture_output=True, text=True, timeout=60).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return saida.splitlines()[0] if saida else None
+
+
 def achar_adomd():
     candidatos = [os.environ.get('ADOMD_DLL', '')]
     candidatos += glob.glob(r'C:\Program Files\Microsoft Power BI Desktop\bin\Microsoft.PowerBI.AdomdClient.dll')
-    candidatos += glob.glob(r'C:\Program Files\WindowsApps\Microsoft.MicrosoftPowerBIDesktop_*\bin\Microsoft.PowerBI.AdomdClient.dll')
+    store = pasta_desktop_da_store()
+    if store:
+        candidatos.append(os.path.join(store, 'bin', 'Microsoft.PowerBI.AdomdClient.dll'))
     candidatos += glob.glob(r'C:\Windows\Microsoft.NET\assembly\GAC_MSIL\Microsoft.AnalysisServices.AdomdClient\*\Microsoft.AnalysisServices.AdomdClient.dll')
     return next((c for c in candidatos if c and os.path.exists(c)), None)
 
