@@ -7,3 +7,9 @@ dados/brutos/
 **/.pbi/localSettings.json
 **/.pbi/cache.abf
 .env
+
+# Compilação do relatório à mão, na pasta relatorio/ (o verificador compila numa pasta temporária)
+relatorio/*.aux
+relatorio/*.log
+relatorio/*.out
+relatorio/*.toc

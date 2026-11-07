@@ -1,0 +1,702 @@
+% ══════════════════════════════════════════════════════════════════════
+% RELATÓRIO CURTO: Indicadores dos municípios de São Paulo
+% ══════════════════════════════════════════════════════════════════════
+% Feito de estilo/modelo_relatorio.tex (o kit do portfólio). O bloco entre
+% "PREÂMBULO DO KIT" e "FIM DO PREÂMBULO DO KIT" é o do kit, sem mudança.
+%
+% Nenhum número é digitado aqui: cada \Num... vem de relatorio/numeros.tex,
+% e as linhas de tabela e os trechos de código vêm de relatorio/gerados/,
+% todos escritos por scripts/numeros.py. Registro em NUMEROS_CANONICOS.md.
+%
+% Compilar (da pasta relatorio/): pdflatex relatorio.tex, duas passadas.
+% Ou, da raiz: python scripts/numeros.py && python scripts/verificar_textos.py
+% (o verificador compila e grava relatorio/relatorio.pdf).
+
+% ══════════════════════════════════════════════════════════════════════
+% PREÂMBULO DO KIT: daqui até "FIM DO PREÂMBULO DO KIT", não edite
+% ══════════════════════════════════════════════════════════════════════
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazilian]{babel}
+
+% A mancha: 15 cm de linha, cerca de 3,2 alfabetos de Libertine 11pt. As
+% figuras NÃO vivem nesta medida: ver \figwidth, mais abaixo.
+\usepackage[top=2cm, bottom=2cm, left=3cm, right=3cm]{geometry}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{caption}
+% A opção `table` liga o colortbl, que é o que dá a zebra (\rowcolors).
+\usepackage[table]{xcolor}
+\usepackage{enumitem}
+% Capa: a curva em TikZ e os ícones vetoriais do Font Awesome.
+\usepackage{tikz}
+\usepackage{fontawesome5}
+
+% ── AS FONTES: serifa no corpo, Lato em tabela e figura ───────────────
+% `lato` SEM a opção `default`: o corpo não muda e o comando \lato fica
+% disponível. A `libertine` entra DEPOIS da `lato`, porque as duas mexem
+% em \sfdefault e a última vence. A matemática acompanha a Libertine.
+\usepackage{lato}
+\usepackage{libertine}
+\usepackage{libertinust1math}
+
+% ── AS CORES: ColorBrewer Set1 e a escala tirada do #0A0310 ───────────
+% Os mesmos hexadecimais do estilo_portfolio.py e do theme_portfolio.R.
+\definecolor{azul}{HTML}{377EB8}       % destaque principal
+\definecolor{vermelho}{HTML}{E41A1C}   % destaque secundário
+\definecolor{verde}{HTML}{4DAF4A}
+\definecolor{roxo}{HTML}{984EA3}
+\definecolor{laranja}{HTML}{FF7F00}
+\definecolor{marrom}{HTML}{A65628}
+\definecolor{rosa}{HTML}{F781BF}
+\definecolor{tinta}{HTML}{0A0310}      % o quase-preto do kit
+\definecolor{tinta2}{HTML}{403A45}     % GRAY_70: texto secundário
+\definecolor{tinta3}{HTML}{5D5961}     % GRAY_60: rodapé, nota
+% Versões de TEXTO das cores claras, escurecidas até 4,5:1 contra o branco
+% por cor_de_texto() do estilo_portfolio.py. Vermelho e roxo já passam.
+\definecolor{azulTexto}{HTML}{3579B1}
+\definecolor{verdeTexto}{HTML}{3C823B}
+
+% ── A ZEBRA, aplicada a TODA tabela sem editar tabela nenhuma ─────────
+% A alternância é ancorada no PRIMEIRO \midrule de cada tabular (o fim do
+% cabeçalho), e não no número da linha: assim a primeira linha de dado
+% sai sempre branca, com cabeçalho de uma ou de duas linhas.
+%
+% ⚠ A ordem {zebraclara}{white} é contraintuitiva e está certa: o
+% contador sobe ANTES de a cor ser escolhida. Invertê-la inverte a zebra.
+% ⚠ O reset vai dentro de \noalign, senão "Misplaced \noalign".
+\usepackage{etoolbox}
+\definecolor{zebraclara}{HTML}{F4F4F4}
+\newif\ifzebraprimeiromidrule
+\newcommand{\zebratabela}{%
+  \lato
+  \global\zebraprimeiromidruletrue
+  \rowcolors{1}{zebraclara}{white}%
+}
+\AtBeginEnvironment{tabular}{\zebratabela}
+\AtBeginEnvironment{longtable}{\zebratabela}
+\pretocmd{\midrule}{%
+  \noalign{%
+    \ifzebraprimeiromidrule
+      \global\zebraprimeiromidrulefalse
+      \global\rownum=0\relax
+    \fi}%
+}{}{\typeout{ATENCAO: o patch de \string\midrule\space para a zebra FALHOU}}
+
+% ── A BOLINHA DE ESTADO, para coluna sim/não de tabela ────────────────
+% É reforço, e não substituição: o texto fica ao lado. Os três tons têm o
+% mesmo contraste (2,3:1), calculado no projeto de origem. Glifo, e não
+% TikZ: \tikz dentro de \caption derruba a compilação.
+\definecolor{bolinhaSim}{HTML}{6DBD6B}
+\definecolor{bolinhaNao}{HTML}{F29192}
+\definecolor{bolinhaEmpate}{HTML}{B1AE28}
+\DeclareRobustCommand{\bolinha}[1]{\textcolor{#1}{%
+  \raisebox{-0.06ex}{\scalebox{2}{$\bullet$}}}}
+\DeclareRobustCommand{\marcasim}{\bolinha{bolinhaSim}\,sim}
+\DeclareRobustCommand{\marcanao}{\bolinha{bolinhaNao}\,não}
+\DeclareRobustCommand{\marcaempate}{\bolinha{bolinhaEmpate}\,empate}
+
+% ── A CAIXA DE DESTAQUE ───────────────────────────────────────────────
+% Para o achado principal de uma seção, uma por seção no máximo. Fio azul
+% à esquerda, fundo da zebra, título em Lato. Quebra entre páginas.
+%   \begin{destaque}[Título opcional] texto \end{destaque}
+\usepackage[most]{tcolorbox}
+\newtcolorbox{destaque}[1][Em uma frase]{%
+  enhanced, breakable,
+  colback=zebraclara, colframe=azul,
+  boxrule=0pt, leftrule=2.5pt, arc=0pt, outer arc=0pt,
+  left=10pt, right=10pt, top=8pt, bottom=8pt,
+  before skip=12pt, after skip=12pt,
+  % ⚠ A cor do título é `coltitle`: um \color antes de \tcbtitle não vale,
+  % porque o tcolorbox reaplica coltitle (branco por padrão) por dentro.
+  title={#1}, detach title, coltitle=azulTexto,
+  before upper={{\lato\bfseries\tcbtitle}\par\smallskip},
+}
+
+\usepackage{needspace}
+\usepackage[hidelinks]{hyperref}
+\setcounter{tocdepth}{2}
+\hypersetup{bookmarksdepth=3, bookmarksnumbered=true, bookmarksopen=false}
+
+\captionsetup{font=small, labelfont=bf}
+\captionsetup[sub]{font=footnotesize}
+
+\graphicspath{{figuras/}{exemplos/}}
+
+% Paginação: altura natural, sem esticar o espaço vertical; sem órfãs nem
+% viúvas; folga mínima de composição em vez de reescrever prosa.
+\raggedbottom
+\widowpenalty=10000
+\clubpenalty=10000
+\emergencystretch=1em
+
+% ── \figwidth: a figura é mais larga que a prosa ──────────────────────
+% A figura vive na medida de 1 cm de margem no papel (19 cm em A4), e não
+% na mancha de 15 cm. Definida pelo papel, e não por número copiado.
+\newlength{\figwidth}
+\setlength{\figwidth}{\dimexpr\paperwidth-2cm\relax}
+
+% \imagemplena[fração]{arquivo}: a imagem centrada sobre a mancha. A caixa
+% de largura declarada impede o transbordo só para a direita e não conta
+% como Overfull \hbox.
+\newcommand{\imagemplena}[2][1]{%
+  \makebox[\linewidth][c]{\includegraphics[width=#1\figwidth]{#2}}}
+
+% tabelaplena: a tabela que não cabe na mancha ganha a medida da figura.
+% Só para tabular (caixa não quebra entre páginas).
+\newsavebox{\tabelacaixa}
+\newenvironment{tabelaplena}
+  {\begin{lrbox}{\tabelacaixa}}
+  {\end{lrbox}\makebox[\linewidth][c]{\usebox{\tabelacaixa}}}
+
+% \subfig[largura]{arquivo}{legenda}: um painel por linha, na medida da figura.
+\newcommand{\subfig}[3][0.62\figwidth]{%
+  \makebox[\linewidth][c]{%
+  \begin{subfigure}[t]{#1}
+    \centering
+    \includegraphics[width=\linewidth]{#2}
+    \caption{#3}
+  \end{subfigure}}\par\medskip}
+% \linhasde{arquivo}: as linhas de uma tabela, escritas por script.
+% ⚠ Não use \input dentro de tabular: ele não é expansível, e o
+% \bottomrule seguinte derruba a compilação com "Misplaced \noalign". O
+% \@@input primitivo é expansível, e o espaço depois de #1 encerra o nome.
+\makeatletter
+\newcommand{\linhasde}[1]{\@@input #1 }
+\makeatother
+% ══════════════════════════════════════════════════════════════════════
+% FIM DO PREÂMBULO DO KIT
+% ══════════════════════════════════════════════════════════════════════
+
+% ── AJUSTES DO PROJETO (fora do bloco do kit) ─────────────────────────
+% As figuras e as capturas ficam fora de relatorio/.
+\graphicspath{{../graficos/}{../powerbi/capturas/}}
+
+% A captura do Power BI entra se o arquivo existir; senão, uma caixa diz
+% que ela falta, e o PDF compila do mesmo jeito. Uso:
+%   \def\capturaArquivo{../powerbi/capturas/arquivo.png}\captura
+\newtcolorbox{capturapendente}{%
+  colback=zebraclara, colframe=tinta, boxrule=0.4pt, arc=0pt,
+  width=0.7\figwidth, height=4cm, valign=center, halign=center, center}
+\newcommand{\captura}{%
+  \IfFileExists{\capturaArquivo}%
+    {\imagemplena[0.86]{\capturaArquivo}}%
+    {\begin{capturapendente}
+       {\lato\color{tinta2}Captura pendente: será exportada do Power BI Desktop\par
+        \smallskip\footnotesize\texttt{\capturaArquivo}}
+     \end{capturapendente}}}
+
+% codigo: trecho de código (verbatim) que começa na margem do texto e pode
+% avançar sobre a margem direita, até a medida da figura.
+\newsavebox{\codigocaixa}
+\newenvironment{codigo}
+  {\par\smallskip\begin{lrbox}{\codigocaixa}\begin{minipage}{1.2\linewidth}\footnotesize}
+  {\end{minipage}\end{lrbox}\noindent\makebox[\linewidth][l]{\usebox{\codigocaixa}}\par\smallskip}
+
+% ── DADOS DA CAPA: preencha por relatório ─────────────────────────────
+\newcommand{\RotuloCapa}{RELATÓRIO TÉCNICO \textperiodcentered\ PROJETO DE PORTFÓLIO}
+\newcommand{\TituloRelatorio}{Indicadores dos municípios de São Paulo}
+\newcommand{\SubtituloRelatorio}{Modelo estrela no Power BI, planilha com PROCX e previsão da receita testada contra o passado}
+\newcommand{\DelimitacaoRelatorio}{\NumMunicipios{} municípios paulistas, \NumIndicadores{} Indicadores de dado público \\ Período: \NumAnoInicial{} a \NumAnoFinal; previsão até \NumAnoPrevFinal}
+\newcommand{\AutorNome}{João Eduardo Pastori Garcia}
+\newcommand{\AutorPapel}{Graduando em Estatística, Unicamp}
+\newcommand{\AutorLinkedIn}{https://www.linkedin.com/in/joao-eduardo-garcia/}
+\newcommand{\LocalCapa}{São Paulo -- SP}
+\newcommand{\DataCapa}{\NumMesCapa{} de \NumAnoCapa}
+
+% ── OS NÚMEROS DO RELATÓRIO: gerados por script, nunca digitados ──────
+\input{numeros.tex}
+
+\title{\TituloRelatorio}
+
+\begin{document}
+
+% ══════════════════════════════ CAPA ══════════════════════════════════
+\begin{titlepage}
+  \centering
+  \vspace*{0.5cm}
+
+  {\color{tinta}\rule{\linewidth}{1.5pt}} \\[0.4cm]
+  {\small\bfseries\color{tinta2} \RotuloCapa} \\[0.2cm]
+  {\color{tinta}\rule{\linewidth}{0.5pt}}
+
+  \vspace{1.6cm}
+
+  \begin{tikzpicture}
+    \draw[line width=1.6pt, azul, smooth]
+      plot coordinates {(0.2,0.35) (1.7,0.62) (3.2,0.48) (4.7,0.95)
+                        (6.2,1.32) (7.7,1.12) (9.2,1.58) (10.7,1.42)};
+    \foreach \x/\c in {0.2/verde, 2.9/vermelho, 5.6/azul, 8.3/roxo}
+      \fill[\c] (\x,-0.28) rectangle ++(2.4,0.07);
+  \end{tikzpicture}
+
+  \vspace{1.2cm}
+
+  \begin{minipage}{0.94\textwidth}
+    \centering
+    {\Huge\bfseries\color{azul} \TituloRelatorio \par}
+    \vspace{0.5cm}
+    {\LARGE\bfseries\color{vermelho} \SubtituloRelatorio \par}
+  \end{minipage}
+
+  \vspace{1.1cm}
+
+  % Um ícone por eixo: a base, o modelo estrela, a planilha e a previsão.
+  {\Large
+   \textcolor{azul}{\faDatabase}\hspace{1.1cm}
+   \textcolor{vermelho}{\faProjectDiagram}\hspace{1.1cm}
+   \textcolor{azul}{\faTable}\hspace{1.1cm}
+   \textcolor{vermelho}{\faChartLine}\par}
+
+  \vspace{1.0cm}
+
+  {\large\itshape\color{tinta2} \DelimitacaoRelatorio \par}
+
+  \vspace{2.2cm}
+
+  {\large\bfseries\color{azul} Autoria} \\[0.6cm]
+
+  \begin{minipage}{0.85\textwidth}
+    \centering
+    {\large\bfseries \AutorNome} \\
+    {\normalsize\color{tinta2} \AutorPapel} \\[0.15cm]
+    {\footnotesize
+     \href{\AutorLinkedIn}{\color{vermelho}\textbf{LinkedIn}}}
+  \end{minipage}
+
+  \vfill
+
+  {\color{tinta2}\rule{4cm}{0.5pt}} \\[0.3cm]
+  {\small\color{tinta2} \LocalCapa \\ \bfseries \DataCapa}
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Onde o município está, e onde estão os parecidos}
+\label{sec:problema}
+
+Quem acompanha as contas e os serviços de uma prefeitura tem o dado, mas
+não tem como responder, sem uma semana de planilha, a três perguntas:
+\textbf{onde o meu município está}, \textbf{onde estão os municípios
+parecidos com ele} e \textbf{para onde a receita aponta}. O dado existe,
+aberto, em quatro lugares (Tesouro Nacional, IBGE, INEP e DataSUS), em
+formatos e anos diferentes e com erros de declaração.
+
+O projeto responde às três perguntas para os \NumMunicipios{} municípios
+de São Paulo, de \NumAnoInicial{} a \NumAnoFinal, com \NumIndicadores{}
+Indicadores definidos por escrito (fórmula, fonte, periodicidade e meta).
+Os Municípios parecidos são os da mesma Faixa de porte do Censo 2022, e a
+comparação mostra a Mediana da faixa, os quartis e a Posição na faixa,
+nunca um ranking por nome. As entregas são um painel no Power BI sobre um
+modelo estrela, uma planilha de Excel com PROCX e tabela dinâmica e uma
+Previsão da receita testada contra o passado.
+
+O município de exemplo de todas as figuras é \NumExemplo{}, com
+\NumExemploPopulacao{} habitantes no Censo 2022, sorteado com semente fixa
+entre os \NumExemploCandidatos{} municípios com série completa: ninguém o
+escolheu pelo que ele mostra. A Figura~\ref{fig:painel} responde à
+primeira pergunta para ele; a Figura~\ref{fig:faixa}, à segunda.
+
+\begin{figure}[H]
+  \centering
+  \imagemplena[0.86]{01-painel-municipio.png}
+  \caption{\NumExemplo{} \NumFigUmVerbo{} \NumFigUmDif\% \NumFigUmSentido{}
+    \NumFigUmObjeto{} que a mediana dos \NumExemploNaFaixa{} municípios
+    \NumExemploFaixa{} habitantes, em \NumFigUmAno. Valor do município em
+    vermelho, Mediana da faixa em cinza e, na sombra, do primeiro ao terceiro
+    quartil dos Municípios parecidos, em reais de \NumAnoBaseReais.}
+  \label{fig:painel}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \imagemplena[0.86]{02-municipio-na-faixa.png}
+  \caption{\NumExemplo{} fica acima da Mediana da faixa em
+    \NumFigDoisAcima{} de \NumIndicadoresComparaveis{} Indicadores. O mais
+    perto de uma ponta da faixa é o \NumFigDoisExtremo, com Posição na faixa
+    de \NumFigDoisExtremoPos\%. Cada caixa vai do primeiro ao terceiro quartil
+    dos Municípios parecidos, no último ano com dado de cada Indicador.}
+  \label{fig:faixa}
+\end{figure}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Saíram \NumExclusoes{} valores declarados, de \NumMunicipioAnos{} declarações}
+\label{sec:dados}
+
+As finanças vêm da Declaração de Contas Anuais (DCA, anexos I-C e I-E) do
+Siconfi, do Tesouro Nacional; a população, o PIB dos municípios e o IPCA,
+do IBGE; o Ideb, do INEP; e os nascidos vivos por número de consultas de
+pré-natal, do SINASC (DataSUS). Consultas SQL comentadas montam uma base
+SQLite com uma tabela fato longa, de \NumLinhasFato{} linhas (município,
+ano e Indicador com dado). Os valores em reais estão a preços de
+\NumAnoBaseReais, pela média anual do IPCA.
+
+A DCA é autodeclarada, e alguns municípios declararam, em certos anos,
+valores várias vezes menores que os seus próprios dos outros anos. A
+\textbf{regra de qualidade da declaração} é igual para todos e compara o
+município com ele mesmo, e não com a faixa: valor zero ou negativo sai, e
+o valor de um ano sai quando passa de \NumRegraFator{} vezes a média dos
+\emph{outros} anos do mesmo município, para cima ou para baixo. Um
+município de royalties, com receita alta em todos os anos, fica. O que sai
+fica listado, com o motivo, num arquivo próprio; município que não
+entregou a declaração fica sem valor, e nada é imputado.
+
+\begin{destaque}[A regra da declaração, em números]
+  Saíram \NumExclusoes{} valores, de \NumMunicipiosComExclusao{}
+  municípios, entre \NumMunicipioAnos{} declarações possíveis
+  (\NumMunicipios{} municípios em cada ano da série). A regra corta o erro
+  de declaração sem tirar o município que é diferente dos outros de
+  verdade.
+\end{destaque}
+
+Cada Indicador foi refeito em pandas, sem olhar o SQL, e comparado linha
+a linha com a consulta (Seção~\ref{sec:conferencia}).
+
+% ══════════════════════════════════════════════════════════════════════
+\section{Um modelo estrela com \NumTabelasFato{} fatos e \NumDimensoes{} dimensões}
+\label{sec:modelo}
+
+O modelo semântico do Power BI está escrito em TMDL, texto que se lê e se
+revisa no próprio repositório, linha a linha. As consultas do Power Query
+leem os CSV tratados por um parâmetro de pasta. As tabelas fato ficam no
+centro; as dimensões, em volta, ligadas por \NumRelacoes{} relações
+um-para-muitos, todas de direção única, com as chaves ocultas
+(Tabela~\ref{tab:modelo} e Figura~\ref{fig:modelo}).
+
+\begin{table}[H]
+  \centering
+  \caption{As tabelas do modelo estrela, lidas do TMDL. A coluna da direita
+    lista as tabelas com que cada uma se relaciona.}
+  \label{tab:modelo}
+  \small
+  \begin{tabelaplena}
+  \begin{tabular}{@{}lllrp{6cm}@{}}
+    \toprule
+    Tabela & Papel & Grão & Linhas & Liga-se a \\
+    \midrule
+    \linhasde{gerados/tabelas_modelo.tex}
+    \bottomrule
+  \end{tabular}
+  \end{tabelaplena}
+\end{table}
+
+\textbf{Por que a referência da faixa é uma segunda fato.} A mediana e os
+quartis vêm prontos, por Faixa de porte, ano e Indicador, na tabela
+\texttt{ref\_faixa}. O Power BI não relaciona por chave composta, e a
+saída mais óbvia seria deixar essa tabela solta e filtrar as três colunas
+dentro de cada medida. O registro de decisão (ADR) do projeto escolheu
+outra: \texttt{ref\_faixa} se liga a \texttt{dim\_ano} e a
+\texttt{dim\_indicador} por coluna simples e vira uma segunda tabela fato,
+em outro grão, que compartilha as dimensões com \texttt{fato\_indicador}.
+A Faixa de porte do Município selecionado chega por \texttt{TREATAS}. Assim
+o ano e o Indicador do contexto filtram sozinhos, as medidas ficam curtas e
+não é preciso uma \texttt{dim\_faixa} em floco de neve, que pediria relação
+bidirecional para o filtro do município subir até ela.
+
+\begin{figure}[H]
+  \centering
+  \def\capturaArquivo{../powerbi/capturas/05-modelo.png}\captura
+  \caption{A visão de modelo do Power BI Desktop: \NumTabelasFato{} tabelas
+    fato no centro e \NumDimensoes{} dimensões conformes, em
+    \NumRelacoes{} relações um-para-muitos de direção única. A referência da
+    faixa compartilha o ano e o Indicador com a fato principal.}
+  \label{fig:modelo}
+\end{figure}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{\NumMedidas{} medidas DAX, em \NumPastasMedidas{} pastas de exibição}
+\label{sec:medidas}
+
+Todo número de visual é uma medida: o modelo desencoraja a medida
+implícita. As medidas ficam numa tabela própria, organizadas em pastas de
+exibição e com descrição (Tabela~\ref{tab:pastas}).
+
+\begin{table}[H]
+  \centering
+  \caption{As medidas por pasta de exibição, com as primeiras de cada uma.}
+  \label{tab:pastas}
+  \small
+  \begin{tabular}{@{}lrp{9cm}@{}}
+    \toprule
+    Pasta & Medidas & Exemplos \\
+    \midrule
+    \linhasde{gerados/pastas_medidas.tex}
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A \textbf{Mediana da faixa} é a medida que a decisão sobre
+\texttt{ref\_faixa} encurta. O ano e o Indicador já chegam pelas relações;
+só a Faixa de porte, que mora em \texttt{dim\_municipio}, é levada a
+\texttt{ref\_faixa} por \texttt{TREATAS}. A guarda com
+\texttt{HASONEVALUE} devolve vazio, e não um \texttt{MAX} sem sentido,
+quando o contexto tem mais de um ano, Indicador ou faixa.
+
+\begin{codigo}\input{gerados/dax_mediana.tex}\end{codigo}
+
+A \textbf{Posição na faixa} é a fração dos outros Municípios parecidos com
+valor menor que o do Município selecionado: do menor valor da faixa ao
+maior. É uma posição, e não uma nota. A medida tira o filtro do município,
+recoloca o da faixa e conta quantos têm valor menor, dividindo pelo tamanho
+do grupo menos um, a mesma conta do \texttt{PERCENT\_RANK} do SQL. O
+\texttt{COUNTROWS} de uma tabela vazia devolve \texttt{BLANK}, e não zero:
+sem a soma de zero no fim, o menor valor da faixa ficava sem posição. A
+conferência no motor do Power BI acusou esse defeito, que foi corrigido.
+
+\begin{codigo}\input{gerados/dax_posicao.tex}\end{codigo}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{\NumDivergenciasCompletas{} divergências em \NumCelulasCompletas{} células conferidas}
+\label{sec:conferencia}
+
+Cada número do projeto foi conferido por uma segunda implementação, ou por
+um motor de verdade, comparada com a fonte, e o resultado ficou gravado no
+repositório (Tabela~\ref{tab:conferencias}). As medidas DAX foram
+conferidas no próprio motor do Power BI, com o Desktop aberto: primeiro
+contra uma tabela de valores esperados, escrita antes de as medidas
+existirem, e depois contra o SQLite, em todas as linhas da fato.
+
+\begin{table}[H]
+  \centering
+  \caption{As conferências e o resultado de cada uma.}
+  \label{tab:conferencias}
+  \small
+  \begin{tabular}{@{}p{3.7cm}p{5.4cm}rr@{}}
+    \toprule
+    Conferência & O que compara & Células & Resultado \\
+    \midrule
+    \linhasde{gerados/conferencias.tex}
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{destaque}[As medidas devolvem os números certos]
+  Na tabela de conferência, batem \NumCelulasBatem{} de
+  \NumCelulasConferencia{} células, de \NumMunicipiosConferencia{}
+  municípios sorteados. Contra o SQLite, a Mediana da faixa, a Posição na
+  faixa e o Valor foram calculados para cada uma das \NumLinhasFato{}
+  linhas da fato: \NumCelulasCompletas{} células, com
+  \NumDivergenciasCompletas{} divergências.
+\end{destaque}
+
+A planilha foi conferida da mesma forma: o Excel para a web calculou as
+fórmulas, e o conferidor leu os valores calculados de uma cópia por
+município e os comparou com o SQLite (Seção~\ref{sec:planilha}).
+
+% ══════════════════════════════════════════════════════════════════════
+\section{O painel: \NumPaginasPainel{} páginas, com visuais definidos em código}
+\label{sec:painel}
+
+O painel abre no Power BI Desktop, a partir do projeto PBIP versionado. Os
+\textbf{visuais são definidos em código (PBIR) sobre modelo em TMDL}: um
+script em Python escreve cada página e cada visual, com os campos, as
+medidas, o formato, o texto alternativo e a ordem de tabulação, e um
+roteiro legível descreve o que cada página mostra. Um ajuste se faz no
+gerador e se roda de novo; o diff mostra o que mudou em cada visual. O
+Desktop serve para abrir o projeto, atualizar os dados, conferir as
+medidas e exportar as capturas.
+
+As cores seguem o kit: o Município selecionado sai no vermelho de
+destaque, só em marca, e a mediana e os quartis no cinza neutro. Nenhum
+visual usa cor de bom ou ruim, porque nenhum Indicador tem um lado melhor
+que valha para todo município, e nenhum visual ordena municípios por nome.
+
+\begin{figure}[H]
+  \centering
+  \def\capturaArquivo{../powerbi/capturas/01-municipio.png}\captura
+  \caption{Página Município: \NumExemplo{} está na faixa
+    \NumExemploFaixa{} habitantes, com \NumExemploNaFaixa{} municípios. Os
+    cartões trazem o último valor de quatro Indicadores financeiros ao lado
+    da Mediana da faixa; a linha mostra a série contra a mediana e os
+    quartis.}
+  \label{fig:cap-municipio}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \def\capturaArquivo{../powerbi/capturas/02-comparacao.png}\captura
+  \caption{Página Comparação na faixa: \NumExemplo{} em vermelho entre os
+    \NumExemploNaFaixa{} Municípios parecidos, na despesa com saúde por
+    habitante. Mostra a posição no grupo, e não uma lista do pior ao
+    melhor.}
+  \label{fig:cap-comparacao}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \def\capturaArquivo{../powerbi/capturas/03-previsao.png}\captura
+  \caption{Página Previsão da receita: R\$ \NumExemploPrevista{} milhões
+    para \NumExemplo{} em \NumAnoPrevFinal, com os Intervalos de previsão de
+    \NumNivelOitenta\% e de \NumNivelNoventaCinco\% e o aviso do que o
+    método não conhece.}
+  \label{fig:cap-previsao}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \def\capturaArquivo{../powerbi/capturas/04-como-ler.png}\captura
+  \caption{Página Como ler, fontes e limites: a definição escrita de cada
+    Indicador e o Teste contra o passado, em que o intervalo de
+    \NumNivelOitenta\% cobriu \NumCobOitentaPior\% na origem
+    \NumCobOitentaPiorOrigem.}
+  \label{fig:cap-como-ler}
+\end{figure}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{A planilha: \NumCelulasExcelBatem{} de \NumCelulasExcel{} células iguais ao SQLite}
+\label{sec:planilha}
+
+A planilha é \textbf{gerada por script em Python e completada no Excel
+para a web (tabela dinâmica e segmentação), com passo a passo para refazer
+à mão}. O Excel disponível é o da web, que não grava Power Query nem roda
+automação; por isso os CSV entram como tabelas nomeadas (\texttt{tFato},
+\texttt{tReferencia}, \texttt{tMunicipios}, \ldots), e a fórmula lê
+\texttt{tFato[valor]}, e não um intervalo fixo. O Power Query do projeto
+está onde ele é natural: nas consultas do modelo do Power BI.
+
+Na aba Painel, o leitor escolhe o município numa lista, e o PROCX traz o
+resto. O valor de um município num ano e num Indicador é uma busca por
+chave composta. Cada comparação entre parênteses devolve uma lista de
+verdadeiros e falsos, uma por linha da tabela; o produto das três vale um
+só na linha em que as três valem, e o PROCX procura esse um. É o PROCV de
+chave composta sem coluna auxiliar:
+
+\begin{codigo}\input{gerados/excel_procx.tex}\end{codigo}
+
+O LET dá nome a um resultado intermediário para não repetir a conta. Aqui
+ele guarda o último ano com dado do município no Indicador, que as outras
+colunas da linha leem:
+
+\begin{codigo}\input{gerados/excel_let.tex}\end{codigo}
+
+A Posição na faixa da planilha faz a mesma conta da medida DAX, com LET e
+SOMARPRODUTO. Na aba Explorar, uma tabela dinâmica sobre \texttt{tFato},
+com segmentação por Faixa de porte, foi inserida à mão no Excel para a web.
+
+\begin{destaque}[A planilha confere com a base]
+  O Excel para a web calculou a aba Painel para \NumMunicipiosExcel{}
+  municípios, e o conferidor comparou cada célula com o SQLite:
+  \NumCelulasExcelBatem{} de \NumCelulasExcel{} iguais.
+\end{destaque}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{A tendência dos \NumJanelaEscolhido{} últimos anos erra \NumErroEscolhidoTres\% a \NumHorizontes{} anos}
+\label{sec:previsao}
+
+A Previsão da receita é a receita corrente total esperada para os
+\NumHorizontes{} anos seguintes ao último observado, em R\$ milhões de
+\NumAnoBaseReais, para os \NumMunicipiosComPrevisao{} municípios com
+série suficiente. Foi escolhida a receita total, e não a por habitante,
+porque a população muda de base no Censo 2022 e a receita total não tem
+esse degrau. Concorreram \NumMetodos{} métodos simples, todos com a série
+do próprio município, e cada um foi testado prevendo o passado: a previsão
+parte de cada ano de \NumOrigemInicial{} a \NumOrigemFinal{} e é comparada
+ao que veio depois (Tabela~\ref{tab:metodos}).
+
+\begin{table}[H]
+  \centering
+  \caption{Erro médio absoluto e viés no Teste contra o passado, por
+    horizonte. Repetir o último valor erra por baixo porque a receita
+    cresceu no período; a tendência corrige isso.}
+  \label{tab:metodos}
+  \small
+  \begin{tabelaplena}
+  \begin{tabular}{@{}lrrrr@{}}
+    \toprule
+    Método & A um ano & A dois anos & A três anos & Viés a três anos \\
+    \midrule
+    \linhasde{gerados/teste_metodos.tex}
+    \bottomrule
+  \end{tabular}
+  \end{tabelaplena}
+\end{table}
+
+Os Intervalos de previsão não saem de uma fórmula de erro normal: saem dos
+erros que o método cometeu ao prever o passado, por horizonte e por Grupo
+de porte. A receita dos municípios se move junta (inflação, ICMS,
+transferências), então as \NumOrigensTeste{} origens do teste são, na
+prática, \NumOrigensTeste{} choques, e não centenas de observações
+independentes. Por isso o intervalo foi calibrado deixando uma origem de
+fora, conferido nela e alargado até a cobertura chegar ao nível prometido
+(Tabela~\ref{tab:cobertura}).
+
+\begin{table}[H]
+  \centering
+  \caption{Cobertura dos Intervalos de previsão no Teste contra o passado,
+    antes e depois do alargamento.}
+  \label{tab:cobertura}
+  \small
+  \begin{tabular}{@{}lrrrl@{}}
+    \toprule
+    Intervalo & Sem ajuste & Fator & Com ajuste & Pior origem deixada de fora \\
+    \midrule
+    \linhasde{gerados/cobertura.tex}
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{destaque}[Use o intervalo de \NumNivelNoventaCinco\% como a leitura prudente]
+  Na média, o intervalo de \NumNivelOitenta\% cobre \NumCobOitentaCom\%.
+  Na origem de \NumCobOitentaPiorOrigem, que vem depois de um salto de
+  receita, cobriu só \NumCobOitentaPior\%. O de \NumNivelNoventaCinco\%
+  cobriu \NumCobNoventaCincoPior\% na pior origem.
+\end{destaque}
+
+\begin{figure}[H]
+  \centering
+  \imagemplena[0.86]{03-previsao.png}
+  \caption{A receita de \NumExemplo{} deve chegar a R\$
+    \NumExemploPrevista{} milhões em \NumAnoPrevFinal, entre R\$
+    \NumExemploInfNoventaCinco{} e \NumExemploSupNoventaCinco{} milhões no
+    intervalo de \NumNivelNoventaCinco\% (entre \NumExemploInfOitenta{} e
+    \NumExemploSupOitenta{} no de \NumNivelOitenta\%). Em
+    \NumAnoFinal{} foram R\$ \NumExemploReceitaUltima{} milhões.}
+  \label{fig:previsao}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \imagemplena[0.86]{04-teste-do-modelo.png}
+  \caption{A tendência dos \NumJanelaEscolhido{} últimos anos erra
+    \NumErroEscolhidoTres\% a \NumHorizontes{} anos, contra
+    \NumErroIngenuoTres\% de repetir o último valor. À direita, a cobertura
+    do intervalo de \NumNivelOitenta\% em cada origem deixada de fora:
+    \NumCobOitentaPior\% em \NumCobOitentaPiorOrigem.}
+  \label{fig:teste}
+\end{figure}
+
+% ══════════════════════════════════════════════════════════════════════
+\section{O que os dados não autorizam afirmar}
+\label{sec:limitacoes}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Municípios parecidos é só porte.} Dois municípios da mesma
+    Faixa de porte podem ser muito diferentes (turismo, indústria, região
+    metropolitana). A comparação diz onde o município está no grupo, e não
+    por quê.
+  \item \textbf{Degrau do Censo 2022.} A população anterior projeta o
+    censo anterior, e a de depois vem do Censo 2022. Os Indicadores por
+    habitante saltam na troca de base nos municípios que o Censo corrigiu;
+    a receita total não tem o degrau.
+  \item \textbf{Ideb bienal.} O Ideb sai a cada dois anos, e município sem
+    rede municipal fica sem Ideb. O PIB dos municípios e o pré-natal
+    terminam antes de \NumAnoFinal.
+  \item \textbf{Cobertura do Intervalo de previsão.} Com \NumOrigensTeste{}
+    origens, o ajuste é grosseiro: na origem de \NumCobOitentaPiorOrigem,
+    o intervalo de \NumNivelOitenta\% cobriu \NumCobOitentaPior\%. O método
+    não conhece mudança de lei, de alíquota, de convênio nem de gestão.
+  \item \textbf{Acima da mediana não é melhor.} Gastar mais com saúde que
+    a mediana não é, por si, bom nem ruim; por isso nenhum visual tem cor
+    de bom ou ruim.
+\end{itemize}
+
+\end{document}
