@@ -3,7 +3,8 @@ numpy
 scipy
 matplotlib
 openpyxl
+xlsxwriter
 pymupdf
-# só no Windows, para conferir o Power BI (ADOMD.NET) e montar e conferir a planilha (Excel por COM)
+# só no Windows, para conferir o Power BI (ADOMD.NET pelo pythonnet; OLE DB pelo pywin32, de reserva)
 pythonnet; sys_platform == "win32"
 pywin32; sys_platform == "win32"
