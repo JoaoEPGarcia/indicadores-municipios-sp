@@ -121,7 +121,8 @@ table Medidas
 					dim_municipio[faixa_porte] = faixa
 				)
 			VAR n = COUNTROWS ( grupo )
-			VAR menores = COUNTROWS ( FILTER ( grupo, fato_indicador[valor] < v ) )
+			-- COUNTROWS de tabela vazia é BLANK, e não 0: sem o "+ 0", o menor valor da faixa ficaria sem posição
+			VAR menores = COUNTROWS ( FILTER ( grupo, fato_indicador[valor] < v ) ) + 0
 			RETURN
 				IF (
 					NOT ISBLANK ( v ) && NOT ISBLANK ( faixa )
