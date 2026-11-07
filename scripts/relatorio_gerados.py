@@ -109,7 +109,7 @@ def escrever():
         r'Indicadores: SQL e pandas & cada valor refeito em pandas, sem olhar o SQL & \NumValoresValidados & \NumValoresValidadosIguais',
         r'Medidas DAX e tabela de conferência & valores esperados de \NumMunicipiosConferencia{} municípios sorteados & \NumCelulasConferencia & \NumCelulasBatem',
         r'Medidas DAX e SQLite & \NumMedidasCompletas{} medidas em cada linha da fato & \NumCelulasCompletas & \NumDivergenciasCompletas{} divergências',
-        r'Planilha e SQLite & aba Painel calculada no Excel para a web, \NumMunicipiosExcel{} municípios & \NumCelulasExcel & \NumCelulasExcelBatem',
+        r'Planilha e SQLite & abas Painel e Previsão calculadas no Excel para a web, \NumMunicipiosExcel{} municípios & \NumCelulasExcel & \NumCelulasExcelBatem',
     ])
 
     _linhas(GERADOS / 'teste_metodos.tex', tabela_dos_metodos(modelo))

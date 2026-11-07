@@ -557,7 +557,9 @@ que valha para todo município, e nenhum visual ordena municípios por nome.
 
 A planilha é \textbf{gerada por script em Python e completada no Excel
 para a web (tabela dinâmica e segmentação), com passo a passo para refazer
-à mão}. O Excel disponível é o da web, que não grava Power Query nem roda
+à mão}. O script grava tudo menos a tabela dinâmica e a segmentação, que
+foram inseridas pelo agente de IA (Claude), operando o Excel para a web pelo
+navegador. O Excel disponível é o da web, que não grava Power Query nem roda
 automação; por isso os CSV entram como tabelas nomeadas (\texttt{tFato},
 \texttt{tReferencia}, \texttt{tMunicipios}, \ldots), e a fórmula lê
 \texttt{tFato[valor]}, e não um intervalo fixo. O Power Query do projeto
@@ -580,11 +582,16 @@ colunas da linha leem:
 
 A Posição na faixa da planilha faz a mesma conta da medida DAX, com LET e
 SOMARPRODUTO. Na aba Explorar, uma tabela dinâmica sobre \texttt{tFato},
-com segmentação por Faixa de porte, foi inserida à mão no Excel para a web.
+com segmentação de município, foi inserida pelo agente de IA (Claude, pelo
+navegador) no Excel para a web. A versão final da planilha, com ela e com
+os valores calculados, é \texttt{excel/calculadas/ibira.xlsx}; o arquivo
+que o script gera, \texttt{excel/painel-municipios-sp.xlsx}, é a base, sem
+a tabela dinâmica.
 
 \begin{destaque}[A planilha confere com a base]
-  O Excel para a web calculou a aba Painel para \NumMunicipiosExcel{}
-  municípios, e o conferidor comparou cada célula com o SQLite:
+  O Excel para a web calculou as abas Painel e Previsão para
+  \NumMunicipiosExcel{} municípios, e o conferidor comparou cada célula
+  com o SQLite:
   \NumCelulasExcelBatem{} de \NumCelulasExcel{} iguais.
 \end{destaque}
 

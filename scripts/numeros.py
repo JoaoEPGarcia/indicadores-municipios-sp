@@ -283,8 +283,8 @@ def numeros_do_teste(N, d):
 def numeros_da_conferencia_da_planilha(N):
     """Lidos do resultado que scripts/conferir_excel.py grava."""
     r = json.loads(RESULTADO_EXCEL.read_text(encoding='utf-8')) if RESULTADO_EXCEL.exists() else None
-    for nome, chave, desc in [('NumCelulasExcel', 'celulas', 'células da aba Painel conferidas contra o SQLite'),
-                              ('NumCelulasExcelBatem', 'batem', 'células da aba Painel iguais ao SQLite'),
+    for nome, chave, desc in [('NumCelulasExcel', 'celulas', 'células das abas Painel e Previsão conferidas contra o SQLite'),
+                              ('NumCelulasExcelBatem', 'batem', 'células das abas Painel e Previsão iguais ao SQLite'),
                               ('NumMunicipiosExcel', 'municipios', 'municípios testados na planilha')]:
         valor = PENDENTE if r is None else (r[chave] if chave == 'municipios' else fmt_int(r[chave]))
         N.add(nome, valor, desc, 'scripts/conferir_excel.py')

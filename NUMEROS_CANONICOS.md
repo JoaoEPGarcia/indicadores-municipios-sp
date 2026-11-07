@@ -17,10 +17,10 @@ Cada número impresso no README, no relatório e nos títulos das figuras tem um
 | `\NumAnoPrevInicial` | 2026 | primeiro ano previsto | `scripts/numeros.py` | (ainda não usado) |
 | `\NumAnoPrevFinal` | 2028 | último ano previsto | `scripts/numeros.py` | `docs/README.modelo.md`, `relatorio/relatorio.tex`, `graficos/03-previsao.png` |
 | `\NumMunicipiosComPrevisao` | 642 | municípios com Previsão da receita | `scripts/numeros.py` | `relatorio/relatorio.tex` |
-| `\NumAnoBase` | 2025 | ano dos preços dos valores em reais (o anterior ao primeiro ano previsto) | `scripts/numeros.py` | `docs/README.modelo.md`, `relatorio/relatorio.tex` |
+| `\NumAnoBase` | 2025 | ano dos preços dos valores em reais (o anterior ao primeiro ano previsto) | `scripts/numeros.py` | `docs/README.modelo.md`, `relatorio/relatorio.tex`, `excel/painel-municipios-sp.xlsx` |
 | `\NumAnoFinalPib` | 2023 | último ano do PIB dos Municípios na base | `scripts/numeros.py` | `docs/README.modelo.md` |
-| `\NumNivelMenor` | 80 | nível, em %, do Intervalo de previsão mais estreito | `scripts/modelo.py` | `docs/README.modelo.md`, `relatorio/gerados/cobertura.tex`, `relatorio/relatorio.tex` |
-| `\NumNivelMaior` | 95 | nível, em %, do Intervalo de previsão mais largo | `scripts/modelo.py` | `docs/README.modelo.md`, `relatorio/gerados/cobertura.tex`, `relatorio/relatorio.tex` |
+| `\NumNivelMenor` | 80 | nível, em %, do Intervalo de previsão mais estreito | `scripts/modelo.py` | `docs/README.modelo.md`, `relatorio/gerados/cobertura.tex`, `relatorio/relatorio.tex`, `excel/painel-municipios-sp.xlsx` |
+| `\NumNivelMaior` | 95 | nível, em %, do Intervalo de previsão mais largo | `scripts/modelo.py` | `docs/README.modelo.md`, `relatorio/gerados/cobertura.tex`, `relatorio/relatorio.tex`, `excel/painel-municipios-sp.xlsx` |
 | `\NumPaginasPainel` | 4 | páginas do painel do Power BI (pageOrder do PBIR) | `scripts/gerar_relatorio_pbi.py` | `docs/README.modelo.md`, `relatorio/relatorio.tex` |
 | `\NumDataConsultaFontes` | 14/10/2026 | data da leitura das condições de uso das fontes (constante registrada aqui) | `scripts/numeros.py` | `docs/README.modelo.md` |
 | `\NumTabelasFato` | 3 | tabelas fato do modelo (lado "muitos" das relações: fato_indicador, previsao, ref_faixa) | `scripts/numeros.py` | `docs/README.modelo.md`, `relatorio/relatorio.tex` |
@@ -80,8 +80,8 @@ Cada número impresso no README, no relatório e nos títulos das figuras tem um
 | `\NumCobNoventaCincoPior` | 91 | cobertura do intervalo de 95% na pior origem deixada de fora, depois do ajuste, em % | `scripts/modelo.py` | `docs/README.modelo.md`, `relatorio/gerados/cobertura.tex`, `relatorio/relatorio.tex` |
 | `\NumCobNoventaCincoPiorOrigem` | 2022 | a pior origem deixada de fora para o intervalo de 95% | `scripts/modelo.py` | `docs/README.modelo.md`, `relatorio/gerados/cobertura.tex` |
 | `\NumEscalaNoventaCinco` | 1,15 | fator de alargamento do intervalo de 95% | `scripts/modelo.py` | `docs/README.modelo.md`, `relatorio/gerados/cobertura.tex` |
-| `\NumCelulasExcel` | 256 | células da aba Painel conferidas contra o SQLite | `scripts/conferir_excel.py` | `docs/README.modelo.md`, `relatorio/gerados/conferencias.tex`, `relatorio/relatorio.tex` |
-| `\NumCelulasExcelBatem` | 256 | células da aba Painel iguais ao SQLite | `scripts/conferir_excel.py` | `docs/README.modelo.md`, `relatorio/gerados/conferencias.tex`, `relatorio/relatorio.tex` |
+| `\NumCelulasExcel` | 256 | células das abas Painel e Previsão conferidas contra o SQLite | `scripts/conferir_excel.py` | `docs/README.modelo.md`, `relatorio/gerados/conferencias.tex`, `relatorio/relatorio.tex` |
+| `\NumCelulasExcelBatem` | 256 | células das abas Painel e Previsão iguais ao SQLite | `scripts/conferir_excel.py` | `docs/README.modelo.md`, `relatorio/gerados/conferencias.tex`, `relatorio/relatorio.tex` |
 | `\NumMunicipiosExcel` | 4 | municípios testados na planilha | `scripts/conferir_excel.py` | `docs/README.modelo.md`, `relatorio/gerados/conferencias.tex`, `relatorio/relatorio.tex` |
 | `\NumMesCapa` | Novembro | mês da capa do relatório (o da conferência da planilha gravada em excel/resultado_conferencia_excel.json) | `scripts/conferir_excel.py` | `relatorio/relatorio.tex` |
 | `\NumAnoCapa` | 2026 | ano da capa do relatório (o da conferência da planilha gravada em excel/resultado_conferencia_excel.json) | `scripts/conferir_excel.py` | `relatorio/relatorio.tex` |
