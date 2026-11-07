@@ -3,10 +3,10 @@
   "name": "p1_evolucao",
   "position": {
     "x": 24,
-    "y": 264,
+    "y": 272,
     "z": 4000,
     "width": 760,
-    "height": 436,
+    "height": 412,
     "tabOrder": 3
   },
   "visual": {
@@ -125,7 +125,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 0,
+                      "ColorId": 2,
                       "Percent": 0.0
                     }
                   }
@@ -144,7 +144,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 1,
+                      "ColorId": 3,
                       "Percent": 0.0
                     }
                   }
@@ -163,7 +163,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 1,
+                      "ColorId": 3,
                       "Percent": 0.6
                     }
                   }
@@ -182,7 +182,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 1,
+                      "ColorId": 3,
                       "Percent": 0.6
                     }
                   }
@@ -222,7 +222,7 @@
             "strokeWidth": {
               "expr": {
                 "Literal": {
-                  "Value": "2.0D"
+                  "Value": "2D"
                 }
               }
             },
@@ -243,7 +243,7 @@
             "strokeWidth": {
               "expr": {
                 "Literal": {
-                  "Value": "1.0D"
+                  "Value": "1D"
                 }
               }
             },
@@ -264,7 +264,7 @@
             "strokeWidth": {
               "expr": {
                 "Literal": {
-                  "Value": "1.0D"
+                  "Value": "1D"
                 }
               }
             },
@@ -287,20 +287,14 @@
             "show": {
               "expr": {
                 "Literal": {
-                  "Value": "false"
+                  "Value": "true"
                 }
               }
-            }
-          }
-        }
-      ],
-      "seriesLabels": [
-        {
-          "properties": {
-            "show": {
+            },
+            "position": {
               "expr": {
                 "Literal": {
-                  "Value": "true"
+                  "Value": "'Top'"
                 }
               }
             }
@@ -387,6 +381,13 @@
                     }
                   },
                   "Property": "Título da evolução"
+                }
+              }
+            },
+            "titleWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
                 }
               }
             }

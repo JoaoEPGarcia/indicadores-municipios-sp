@@ -22,7 +22,7 @@
                     "value": "Previsão simples, sem informação de fora da série: repete a tendência recente da receita do município. Não leva em conta mudança de lei, de alíquota, de convênio nem de gestão. O intervalo mostra o quanto o método errou ao prever o passado de municípios do mesmo porte, alargado até a cobertura do teste chegar ao nível prometido. A página \"Como ler\" mostra quanto ele cobriu em cada ano deixado de fora. Projeto de portfólio feito com dado público.",
                     "textStyle": {
                       "fontSize": "10pt",
-                      "fontFamily": "Lato"
+                      "fontFamily": "Lato, 'Segoe UI', sans-serif"
                     }
                   }
                 ]
@@ -83,7 +83,7 @@
             "transparency": {
               "expr": {
                 "Literal": {
-                  "Value": "0.0D"
+                  "Value": "0D"
                 }
               }
             }

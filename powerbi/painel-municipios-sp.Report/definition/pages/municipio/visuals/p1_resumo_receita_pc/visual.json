@@ -3,10 +3,10 @@
   "name": "p1_resumo_receita_pc",
   "position": {
     "x": 24,
-    "y": 136,
+    "y": 156,
     "z": 8000,
     "width": 296,
-    "height": 112,
+    "height": 104,
     "tabOrder": 7
   },
   "visual": {
@@ -82,7 +82,7 @@
             "fontSize": {
               "expr": {
                 "Literal": {
-                  "Value": "16.0D"
+                  "Value": "16D"
                 }
               }
             }
@@ -131,6 +131,13 @@
               "expr": {
                 "Literal": {
                   "Value": "'Receita corrente por habitante'"
+                }
+              }
+            },
+            "titleWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
                 }
               }
             }

@@ -3,10 +3,10 @@
   "name": "p1_indicador",
   "position": {
     "x": 800,
-    "y": 264,
+    "y": 272,
     "z": 3000,
     "width": 456,
-    "height": 168,
+    "height": 156,
     "tabOrder": 2
   },
   "visual": {

@@ -155,7 +155,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 0,
+                      "ColorId": 2,
                       "Percent": 0.0
                     }
                   }
@@ -174,7 +174,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 0,
+                      "ColorId": 2,
                       "Percent": 0.0
                     }
                   }
@@ -193,8 +193,8 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 0,
-                      "Percent": 0.0
+                      "ColorId": 2,
+                      "Percent": 0.5
                     }
                   }
                 }
@@ -212,8 +212,8 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 0,
-                      "Percent": 0.0
+                      "ColorId": 2,
+                      "Percent": 0.5
                     }
                   }
                 }
@@ -231,7 +231,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 1,
+                      "ColorId": 3,
                       "Percent": 0.0
                     }
                   }
@@ -250,7 +250,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 1,
+                      "ColorId": 3,
                       "Percent": 0.0
                     }
                   }
@@ -279,6 +279,13 @@
                   "Value": "true"
                 }
               }
+            },
+            "lineStyle": {
+              "expr": {
+                "Literal": {
+                  "Value": "'solid'"
+                }
+              }
             }
           },
           "selector": {
@@ -290,7 +297,7 @@
             "strokeWidth": {
               "expr": {
                 "Literal": {
-                  "Value": "2.0D"
+                  "Value": "2D"
                 }
               }
             },
@@ -318,7 +325,7 @@
             "strokeWidth": {
               "expr": {
                 "Literal": {
-                  "Value": "1.0D"
+                  "Value": "1D"
                 }
               }
             },
@@ -339,7 +346,7 @@
             "strokeWidth": {
               "expr": {
                 "Literal": {
-                  "Value": "1.0D"
+                  "Value": "1D"
                 }
               }
             },
@@ -360,7 +367,7 @@
             "strokeWidth": {
               "expr": {
                 "Literal": {
-                  "Value": "1.0D"
+                  "Value": "1D"
                 }
               }
             },
@@ -388,7 +395,7 @@
             "strokeWidth": {
               "expr": {
                 "Literal": {
-                  "Value": "1.0D"
+                  "Value": "1D"
                 }
               }
             },
@@ -513,6 +520,13 @@
               "expr": {
                 "Literal": {
                   "Value": "'Receita corrente observada e prevista, com os Intervalos de previsão'"
+                }
+              }
+            },
+            "titleWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
                 }
               }
             }

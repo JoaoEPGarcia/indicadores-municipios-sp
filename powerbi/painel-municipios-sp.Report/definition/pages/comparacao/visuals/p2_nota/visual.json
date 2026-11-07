@@ -22,7 +22,18 @@
                     "value": "Cada ponto é um dos Municípios parecidos (mesma Faixa de porte) que tem dado no ano.",
                     "textStyle": {
                       "fontSize": "9pt",
-                      "fontFamily": "Lato"
+                      "fontFamily": "Lato, 'Segoe UI', sans-serif"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Posição na faixa: 0% é o menor valor da faixa, e 100%, o maior.",
+                    "textStyle": {
+                      "fontSize": "9pt",
+                      "fontFamily": "Lato, 'Segoe UI', sans-serif"
                     }
                   }
                 ]
@@ -33,7 +44,7 @@
                     "value": "A página mostra posição e grupo, e não uma lista do maior ao menor: nenhum lado do eixo é, por si, melhor.",
                     "textStyle": {
                       "fontSize": "9pt",
-                      "fontFamily": "Lato"
+                      "fontFamily": "Lato, 'Segoe UI', sans-serif"
                     }
                   }
                 ]

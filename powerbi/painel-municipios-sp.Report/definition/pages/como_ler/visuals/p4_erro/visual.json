@@ -3,10 +3,10 @@
   "name": "p4_erro",
   "position": {
     "x": 24,
-    "y": 400,
+    "y": 440,
     "z": 3000,
-    "width": 600,
-    "height": 304,
+    "width": 400,
+    "height": 272,
     "tabOrder": 2
   },
   "visual": {
@@ -100,7 +100,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 0,
+                      "ColorId": 2,
                       "Percent": 0.0
                     }
                   }
@@ -142,7 +142,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 1,
+                      "ColorId": 3,
                       "Percent": 0.0
                     }
                   }
@@ -184,7 +184,7 @@
                 "color": {
                   "expr": {
                     "ThemeDataColor": {
-                      "ColorId": 1,
+                      "ColorId": 3,
                       "Percent": 0.0
                     }
                   }
@@ -308,6 +308,13 @@
               "expr": {
                 "Literal": {
                   "Value": "'Tendência dos 3 últimos anos: o método usado na previsão'"
+                }
+              }
+            },
+            "titleWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
                 }
               }
             }

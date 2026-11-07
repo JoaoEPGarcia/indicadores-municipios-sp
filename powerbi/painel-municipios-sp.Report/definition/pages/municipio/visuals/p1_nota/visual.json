@@ -3,10 +3,10 @@
   "name": "p1_nota",
   "position": {
     "x": 24,
-    "y": 700,
+    "y": 688,
     "z": 13000,
     "width": 1232,
-    "height": 20,
+    "height": 28,
     "tabOrder": 12
   },
   "visual": {
@@ -22,7 +22,7 @@
                     "value": "As linhas cinza-claras são o 1º e o 3º quartil dos Municípios parecidos. Estar acima ou abaixo da mediana não é, por si, bom nem ruim.",
                     "textStyle": {
                       "fontSize": "9pt",
-                      "fontFamily": "Lato"
+                      "fontFamily": "Lato, 'Segoe UI', sans-serif"
                     }
                   }
                 ]

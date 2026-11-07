@@ -53,7 +53,7 @@ def literal(v):
     elif isinstance(v, int):
         texto = f'{v}L'
     elif isinstance(v, float):
-        texto = f'{v}D'
+        texto = repr(v).removesuffix('.0') + 'D'     # 1D, 2.5D, como o Desktop grava
     else:
         texto = "'" + str(v).replace("'", "''") + "'"
     return {'Literal': {'Value': texto}}
@@ -67,9 +67,15 @@ def cor_fixa(hexa):
     return {'solid': {'color': lit(hexa.upper())}}
 
 
+# No ThemeDataColor do Power BI, os ids 0 e 1 são o fundo e a cor de texto do tema; a cor i de
+# dataColors é o id i + 2. Com o id 0, o vermelho de destaque saía branco.
+PRIMEIRA_COR_DE_DADOS = 2
+
+
 def cor_tema(indice, clarear=0.0):
-    """Cor `indice` do tema (0 = vermelho de destaque, 1 = cinza neutro), clareada na fração dada."""
-    return {'solid': {'color': {'expr': {'ThemeDataColor': {'ColorId': indice, 'Percent': clarear}}}}}
+    """Cor `indice` de dataColors do tema (0 = vermelho de destaque, 1 = cinza neutro), clareada na fração dada."""
+    return {'solid': {'color': {'expr': {'ThemeDataColor': {'ColorId': PRIMEIRA_COR_DE_DADOS + indice,
+                                                            'Percent': clarear}}}}}
 
 
 def coluna(tabela, nome):
@@ -125,7 +131,8 @@ def filtro(nome, campo, condicao):
 
 
 def paragrafos(*linhas, tamanho=10, negrito=False):
-    estilo = {'fontSize': f'{tamanho}pt', 'fontFamily': 'Lato'}
+    # A pilha de fontes do tema: só 'Lato' o Desktop não resolve e cai numa serifada.
+    estilo = {'fontSize': f'{tamanho}pt', 'fontFamily': gerar_tema.FONTE_TITULO if negrito else gerar_tema.FONTE}
     if negrito:
         estilo['fontWeight'] = 'bold'
     return [{'textRuns': [{'value': linha, 'textStyle': dict(estilo)}]} for linha in linhas]
@@ -157,7 +164,7 @@ class Visual:
                       'visualHeader': [{'properties': {'show': lit(False)}}]}
         if self.titulo is not None:
             texto = {'expr': self.titulo} if isinstance(self.titulo, dict) else lit(self.titulo)   # dict: fx
-            recipiente['title'] = [{'properties': {'show': lit(True), 'text': texto}}]
+            recipiente['title'] = [{'properties': {'show': lit(True), 'text': texto, 'titleWrap': lit(True)}}]
         elif self.tipo != 'textbox':
             recipiente['title'] = [{'properties': {'show': lit(False)}}]
         if self.subtitulo:
@@ -206,11 +213,14 @@ def segmentacao(nome, caixa, campo, rotulo, texto_alternativo, *, ordem, escolhi
 
 
 def cartao(nome, caixa, campo, rotulo, texto_alternativo, *, ordem, filtros=None, tamanho=None, rotulo_visivel=True):
-    """Cartão de um número. O número sai na cor de texto (o tema já faz), e não em vermelho."""
-    objetos = {'categoryLabels': [{'properties': {'show': lit(rotulo_visivel)}}]}
+    """Cartão de um número. O número sai na cor de texto (o tema já faz), e não em vermelho, inteiro
+    (unidade de exibição "nenhuma": 11.690, e não "12 Mil"), no formato da medida."""
+    rotulos = {'labelDisplayUnits': lit(1.0)}
     if tamanho:
-        objetos['labels'] = [{'properties': {'fontSize': lit(float(tamanho))}}]
-        objetos['wordWrap'] = [{'properties': {'show': lit(True)}}]
+        rotulos['fontSize'] = lit(float(tamanho))
+    objetos = {'labels': [{'properties': rotulos}],
+               'categoryLabels': [{'properties': {'show': lit(rotulo_visivel)}}],
+               'wordWrap': [{'properties': {'show': lit(True)}}]}
     return Visual(nome, caixa, 'card', texto_alternativo, ordem=ordem,
                   papeis={'Values': [projecao(campo, rotulo)]}, objetos=objetos, filtros=filtros)
 
@@ -265,6 +275,7 @@ def contexto():
         'ultimo_ano': max(max(a) for a in anos.values()),
         'ano_padrao': max(anos['saude_pc']),
         'ano_base': min(previstos) - 1,      # último ano observado; os reais são a preços dele
+        'ultimo_previsto': max(previstos),
         'metodo_escolhido': nomes_metodo[escolhido],
         'outros_metodos': [nomes_metodo[x] for x in metodos if x != escolhido],
         'nivel': nivel,
@@ -301,11 +312,11 @@ def pagina_municipio(c):
     q1, q3 = medida('1º quartil da faixa'), medida('3º quartil da faixa')
     visuais = [
         titulo_da_pagina('p1_titulo', 'Indicadores do município'),
-        segmentacao('p1_municipio', (24, 64, 320, 56), MUNICIPIO, 'Município',
+        segmentacao('p1_municipio', (24, 64, 320, 64), MUNICIPIO, 'Município',
                     'Lista suspensa com busca: escolhe o município que todas as páginas mostram.',
                     ordem=1, escolhido=c['exemplo'], sincronia=GRUPO_MUNICIPIO),
-        segmentacao_de_indicador('p1_indicador', (800, 264, 456, 168), 2, c),
-        Visual('p1_evolucao', (24, 264, 760, 436), 'lineChart',
+        segmentacao_de_indicador('p1_indicador', (800, 272, 456, 156), 2, c),
+        Visual('p1_evolucao', (24, 272, 760, 412), 'lineChart',
                'Gráfico de linhas por ano: onde o município está, ano a ano, em relação à mediana e aos quartis '
                'dos municípios da mesma faixa de porte, no Indicador escolhido.',
                ordem=3,
@@ -318,23 +329,23 @@ def pagina_municipio(c):
                                  cor_da_serie(q1, cor_tema(1, 0.6)), cor_da_serie(q3, cor_tema(1, 0.6))],
                    'lineStyles': [estilo_de_linha(valor, 2.5, marcador=True), estilo_de_linha(mediana, 2),
                                   estilo_de_linha(q1, 1), estilo_de_linha(q3, 1)],
-                   'legend': [{'properties': {'show': lit(False)}}],
-                   'seriesLabels': [{'properties': {'show': lit(True)}}],
+                   # Legenda no topo: o rótulo na ponta da linha do município batia no do 3º quartil.
+                   'legend': [{'properties': {'show': lit(True), 'position': lit('Top')}}],
                    'categoryAxis': [EIXO_DE_ANOS],
                    'valueAxis': [{'properties': {'showAxisTitle': lit(False)}}],
                }),
-        cartao('p1_faixa', (360, 64, 260, 56), medida('Faixa de porte'), 'Faixa de porte',
-               'Cartão: a Faixa de porte do município, que define com quem ele é comparado.', ordem=4),
-        cartao('p1_na_faixa', (640, 64, 200, 56), medida('Municípios na faixa'), 'Municípios na faixa',
-               'Cartão: quantos municípios de SP estão na mesma Faixa de porte.', ordem=5),
-        cartao('p1_populacao', (860, 64, 200, 56), medida('População (Censo 2022)'), 'População (Censo 2022)',
-               'Cartão: a população do município no Censo 2022.', ordem=6),
+        cartao('p1_faixa', (360, 64, 300, 80), medida('Faixa de porte'), 'Faixa de porte',
+               'Cartão: a Faixa de porte do município, que define com quem ele é comparado.', ordem=4, tamanho=20),
+        cartao('p1_na_faixa', (676, 64, 200, 80), medida('Municípios na faixa'), 'Municípios na faixa',
+               'Cartão: quantos municípios de SP estão na mesma Faixa de porte.', ordem=5, tamanho=20),
+        cartao('p1_populacao', (892, 64, 220, 80), medida('População (Censo 2022)'), 'População (Censo 2022)',
+               'Cartão: a população do município no Censo 2022.', ordem=6, tamanho=20),
     ]
     # Quatro cartões de resumo, cada um preso a um Indicador pelo próprio filtro; a segmentação de
     # Indicador não os filtra (ver visualInteractions na página).
     for i, (ident, nome) in enumerate(zip(c['ids_resumo'], c['resumo'])):
         visuais.append(Visual(
-            f'p1_resumo_{ident}', (24 + i * 312, 136, 296, 112), 'multiRowCard',
+            f'p1_resumo_{ident}', (24 + i * 312, 156, 296, 104), 'multiRowCard',
             f'Cartão de resumo: o último valor de {nome} no município, com a mediana da faixa no mesmo ano e o ano.',
             ordem=7 + i, titulo=nome,
             papeis={'Values': [projecao(medida('Último valor'), 'município'),
@@ -343,15 +354,16 @@ def pagina_municipio(c):
             filtros=[filtro('so_este_indicador', ID_INDICADOR, condicao_em(ID_INDICADOR, [ident]))],
             objetos={'dataLabels': [{'properties': {'color': cor_fixa(ep.TINTA), 'fontSize': lit(16.0)}}]}))
     visuais += [
-        Visual('p1_tabela', (800, 440, 456, 260), 'tableEx',
+        Visual('p1_tabela', (800, 440, 456, 244), 'tableEx',
                'Tabela por ano: o valor do município, a mediana da faixa, a diferença para a mediana e a posição na faixa.',
                ordem=11,
-               papeis={'Values': [projecao(ANO, 'Ano'), projecao(medida('Valor formatado'), 'Valor'),
+               papeis={'Values': [projecao(ANO, 'Ano'), projecao(medida('Valor'), 'Valor'),
                                   projecao(medida('Mediana da faixa'), 'Mediana da faixa'),
                                   projecao(medida('Diferença para a mediana'), 'Diferença'),
                                   projecao(medida('Posição na faixa'), 'Posição na faixa')]},
-               ordenar_por=ANO, filtros=[so_anos_observados('ate_ultimo_ano', c)]),
-        caixa_de_texto('p1_nota', (24, 700, 1232, 20),
+               ordenar_por=ANO, filtros=[so_anos_observados('ate_ultimo_ano', c)],
+               objetos={'total': [{'properties': {'totals': lit(False)}}]}),
+        caixa_de_texto('p1_nota', (24, 688, 1232, 28),
                        'Nota de leitura sobre os quartis e sobre a mediana.',
                        ['As linhas cinza-claras são o 1º e o 3º quartil dos Municípios parecidos. '
                         'Estar acima ou abaixo da mediana não é, por si, bom nem ruim.'], ordem=12, tamanho=9),
@@ -392,7 +404,7 @@ def pagina_comparacao(c):
                         'categoryLabels': [{'properties': {'show': lit(False)}}],
                         'legend': [{'properties': {'show': lit(False)}}]}),
         cartao('p2_posicao', (980, 64, 276, 140), medida('Posição do escolhido'),
-               'Posição na faixa (0% = menor valor, 100% = maior)',
+               'Posição na faixa (0 a 100%)',
                'Cartão: a Posição na faixa do município escolhido, de 0% (menor valor da faixa) a 100% (maior).', ordem=5),
         cartao('p2_valor', (980, 216, 276, 140), medida('Valor do escolhido'), 'Valor do município',
                'Cartão: o valor do Indicador no município escolhido, no ano escolhido.', ordem=6),
@@ -402,6 +414,7 @@ def pagina_comparacao(c):
                'Cartão: a diferença do município escolhido para a mediana da faixa, em %.', ordem=8),
         caixa_de_texto('p2_nota', (24, 484, 320, 216), 'Nota de leitura da dispersão.',
                        ['Cada ponto é um dos Municípios parecidos (mesma Faixa de porte) que tem dado no ano.',
+                        'Posição na faixa: 0% é o menor valor da faixa, e 100%, o maior.',
                         'A página mostra posição e grupo, e não uma lista do maior ao menor: nenhum lado do eixo é, '
                         'por si, melhor.'], ordem=9, tamanho=9),
     ]
@@ -435,9 +448,11 @@ def pagina_previsao(c):
                ordenar_por=ANO,
                objetos={
                    'dataPoint': [cor_da_serie(obs, cor_tema(0)), cor_da_serie(prev, cor_tema(0)),
-                                 cor_da_serie(i80, cor_tema(0)), cor_da_serie(s80, cor_tema(0)),
+                                 cor_da_serie(i80, cor_tema(0, 0.5)), cor_da_serie(s80, cor_tema(0, 0.5)),
                                  cor_da_serie(i95, cor_tema(1)), cor_da_serie(s95, cor_tema(1))],
-                   'lineStyles': [estilo_de_linha(obs, 2.5, marcador=True), estilo_de_linha(prev, 2, tracejado='dashed'),
+                   # observada sólida, prevista tracejada, as duas no vermelho (como na Figura 3)
+                   'lineStyles': [estilo_de_linha(obs, 2.5, marcador=True, tracejado='solid'),
+                                  estilo_de_linha(prev, 2, tracejado='dashed'),
                                   estilo_de_linha(i80, 1), estilo_de_linha(s80, 1),
                                   estilo_de_linha(i95, 1, tracejado='dotted'), estilo_de_linha(s95, 1, tracejado='dotted')],
                    'legend': [{'properties': {'show': lit(False)}}],
@@ -446,7 +461,7 @@ def pagina_previsao(c):
                    'valueAxis': [{'properties': {'showAxisTitle': lit(False)}}],
                }),
         cartao('p3_prevista', (880, 136, 376, 120), medida('Receita prevista no último ano'),
-               f'Receita prevista no último ano, R$ milhões, a preços de {base}',
+               f'R$ milhões em {c["ultimo_previsto"]}, a preços de {base}',
                'Cartão: a receita corrente prevista para o último ano da previsão, em R$ milhões.', ordem=3),
         cartao('p3_frase', (880, 272, 376, 344), medida('Texto da previsão'), 'Previsão',
                'A previsão em uma frase: o valor previsto para o último ano e os dois intervalos, em reais.',
@@ -470,19 +485,23 @@ def pagina_como_ler(c):
         '2022 nos municípios que o Censo corrigiu. O Ideb é bienal, e município sem rede municipal fica sem Ideb. '
         'Municípios parecidos quer dizer só a mesma Faixa de porte.',
     ]
+    # Largura de cada coluna da tabela dos Indicadores: somadas, cabem na tabela sem rolagem lateral, e o
+    # texto longo (fórmula, fonte) quebra em linhas.
+    colunas = [(INDICADOR, 'Indicador', 190), (coluna('dim_indicador', 'unidade'), 'Unidade', 160),
+               (coluna('dim_indicador', 'formula'), 'Fórmula', 330), (coluna('dim_indicador', 'fonte'), 'Fonte', 290),
+               (coluna('dim_indicador', 'periodicidade'), 'Periodicidade', 100),
+               (coluna('dim_indicador', 'meta'), 'Meta', 130)]
     visuais = [
         titulo_da_pagina('p4_titulo', 'Como ler, fontes e limites'),
-        Visual('p4_indicadores', (24, 64, 800, 320), 'tableEx',
+        Visual('p4_indicadores', (24, 64, 1232, 360), 'tableEx',
                'Tabela dos Indicadores: o nome, a unidade, a fórmula, a fonte, a periodicidade e a meta de cada um.',
                ordem=1, titulo='Os Indicadores e como cada um é calculado',
-               papeis={'Values': [projecao(INDICADOR, 'Indicador'), projecao(coluna('dim_indicador', 'unidade'), 'Unidade'),
-                                  projecao(coluna('dim_indicador', 'formula'), 'Fórmula'),
-                                  projecao(coluna('dim_indicador', 'fonte'), 'Fonte'),
-                                  projecao(coluna('dim_indicador', 'periodicidade'), 'Periodicidade'),
-                                  projecao(coluna('dim_indicador', 'meta'), 'Meta')]},
+               papeis={'Values': [projecao(campo, rotulo) for campo, rotulo, _ in colunas]},
                objetos={'columnHeaders': [{'properties': {'wordWrap': lit(True)}}],
-                        'values': [{'properties': {'wordWrap': lit(True)}}]}),
-        Visual('p4_erro', (24, 400, 600, 304), 'lineChart',
+                        'values': [{'properties': {'wordWrap': lit(True)}}],
+                        'columnWidth': [{'properties': {'value': lit(float(largura))}, 'selector': {'metadata': ref(campo)}}
+                                        for campo, _, largura in colunas]}),
+        Visual('p4_erro', (24, 440, 400, 272), 'lineChart',
                'Gráfico de linhas: o erro médio absoluto de cada método de previsão, por horizonte, no teste contra o passado.',
                ordem=2, titulo=f'{c["metodo_escolhido"]}: o método usado na previsão',
                subtitulo='Erro médio absoluto ao prever o passado, por anos à frente',
@@ -495,7 +514,7 @@ def pagina_como_ler(c):
                         'legend': [{'properties': {'show': lit(True), 'position': lit('Top')}}],
                         'categoryAxis': [{'properties': {'axisType': lit('Categorical')}}],
                         'valueAxis': [{'properties': {'showAxisTitle': lit(False)}}]}),
-        Visual('p4_cobertura', (640, 400, 616, 304), 'clusteredColumnChart',
+        Visual('p4_cobertura', (440, 440, 400, 272), 'clusteredColumnChart',
                f'Gráfico de colunas: quanto o Intervalo de previsão de {c["nivel"]}% cobriu em cada ano deixado de fora '
                'no teste contra o passado, com a linha do nível prometido.',
                ordem=3, titulo=f'Cobertura do intervalo de {c["nivel"]}% por ano deixado de fora',
@@ -511,7 +530,7 @@ def pagina_como_ler(c):
                             'lineColor': cor_tema(1), 'style': lit('dashed')}, 'selector': {'id': '1'}}],
                         'valueAxis': [{'properties': {'start': lit(0.0), 'showAxisTitle': lit(False)}}],
                         'categoryAxis': [EIXO_DE_ANOS]}),
-        caixa_de_texto('p4_fontes', (840, 64, 416, 320), 'Fontes, licenças e cuidados de leitura.', fontes,
+        caixa_de_texto('p4_fontes', (856, 440, 400, 272), 'Fontes, licenças e cuidados de leitura.', fontes,
                        ordem=4, tamanho=10),
     ]
     return 'como_ler', 'Como ler, fontes e limites', visuais, []

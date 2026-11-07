@@ -6,7 +6,7 @@
     "y": 440,
     "z": 12000,
     "width": 456,
-    "height": 260,
+    "height": 244,
     "tabOrder": 11
   },
   "visual": {
@@ -38,10 +38,10 @@
                       "Entity": "Medidas"
                     }
                   },
-                  "Property": "Valor formatado"
+                  "Property": "Valor"
                 }
               },
-              "queryRef": "Medidas.Valor formatado",
+              "queryRef": "Medidas.Valor",
               "nativeQueryRef": "Valor",
               "displayName": "Valor"
             },
@@ -111,6 +111,21 @@
         ],
         "isDefaultSort": true
       }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
     },
     "visualContainerObjects": {
       "general": [

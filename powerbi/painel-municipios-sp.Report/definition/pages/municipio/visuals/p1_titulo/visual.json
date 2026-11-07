@@ -22,7 +22,7 @@
                     "value": "Indicadores do município",
                     "textStyle": {
                       "fontSize": "20pt",
-                      "fontFamily": "Lato",
+                      "fontFamily": "'Lato Bold', Lato, 'Segoe UI Semibold', sans-serif",
                       "fontWeight": "bold"
                     }
                   }
