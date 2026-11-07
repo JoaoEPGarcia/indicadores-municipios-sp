@@ -313,7 +313,7 @@ primeira pergunta para ele; a Figura~\ref{fig:faixa}, à segunda.
     \NumFigUmObjeto{} que a mediana dos \NumExemploNaFaixa{} municípios
     \NumExemploFaixa{} habitantes, em \NumFigUmAno. Valor do município em
     vermelho, Mediana da faixa em cinza e, na sombra, do primeiro ao terceiro
-    quartil dos Municípios parecidos, em reais de \NumAnoBaseReais.}
+    quartil dos Municípios parecidos, em reais de \NumAnoBase.}
   \label{fig:painel}
 \end{figure}
 
@@ -338,7 +338,7 @@ do IBGE; o Ideb, do INEP; e os nascidos vivos por número de consultas de
 pré-natal, do SINASC (DataSUS). Consultas SQL comentadas montam uma base
 SQLite com uma tabela fato longa, de \NumLinhasFato{} linhas (município,
 ano e Indicador com dado). Os valores em reais estão a preços de
-\NumAnoBaseReais, pela média anual do IPCA.
+\NumAnoBase, pela média anual do IPCA.
 
 A DCA é autodeclarada, e alguns municípios declararam, em certos anos,
 valores várias vezes menores que os seus próprios dos outros anos. A
@@ -536,7 +536,7 @@ que valha para todo município, e nenhum visual ordena municípios por nome.
   \def\capturaArquivo{../powerbi/capturas/03-previsao.png}\captura
   \caption{Página Previsão da receita: R\$ \NumExemploPrevista{} milhões
     para \NumExemplo{} em \NumAnoPrevFinal, com os Intervalos de previsão de
-    \NumNivelOitenta\% e de \NumNivelNoventaCinco\% e o aviso do que o
+    \NumNivelMenor\% e de \NumNivelMaior\% e o aviso do que o
     método não conhece.}
   \label{fig:cap-previsao}
 \end{figure}
@@ -546,7 +546,7 @@ que valha para todo município, e nenhum visual ordena municípios por nome.
   \def\capturaArquivo{../powerbi/capturas/04-como-ler.png}\captura
   \caption{Página Como ler, fontes e limites: a definição escrita de cada
     Indicador e o Teste contra o passado, em que o intervalo de
-    \NumNivelOitenta\% cobriu \NumCobOitentaPior\% na origem
+    \NumNivelMenor\% cobriu \NumCobOitentaPior\% na origem
     \NumCobOitentaPiorOrigem.}
   \label{fig:cap-como-ler}
 \end{figure}
@@ -594,7 +594,7 @@ com segmentação por Faixa de porte, foi inserida à mão no Excel para a web.
 
 A Previsão da receita é a receita corrente total esperada para os
 \NumHorizontes{} anos seguintes ao último observado, em R\$ milhões de
-\NumAnoBaseReais, para os \NumMunicipiosComPrevisao{} municípios com
+\NumAnoBase, para os \NumMunicipiosComPrevisao{} municípios com
 série suficiente. Foi escolhida a receita total, e não a por habitante,
 porque a população muda de base no Censo 2022 e a receita total não tem
 esse degrau. Concorreram \NumMetodos{} métodos simples, todos com a série
@@ -644,10 +644,10 @@ fora, conferido nela e alargado até a cobertura chegar ao nível prometido
   \end{tabular}
 \end{table}
 
-\begin{destaque}[Use o intervalo de \NumNivelNoventaCinco\% como a leitura prudente]
-  Na média, o intervalo de \NumNivelOitenta\% cobre \NumCobOitentaCom\%.
+\begin{destaque}[Use o intervalo de \NumNivelMaior\% como a leitura prudente]
+  Na média, o intervalo de \NumNivelMenor\% cobre \NumCobOitentaCom\%.
   Na origem de \NumCobOitentaPiorOrigem, que vem depois de um salto de
-  receita, cobriu só \NumCobOitentaPior\%. O de \NumNivelNoventaCinco\%
+  receita, cobriu só \NumCobOitentaPior\%. O de \NumNivelMaior\%
   cobriu \NumCobNoventaCincoPior\% na pior origem.
 \end{destaque}
 
@@ -657,8 +657,8 @@ fora, conferido nela e alargado até a cobertura chegar ao nível prometido
   \caption{A receita de \NumExemplo{} deve chegar a R\$
     \NumExemploPrevista{} milhões em \NumAnoPrevFinal, entre R\$
     \NumExemploInfNoventaCinco{} e \NumExemploSupNoventaCinco{} milhões no
-    intervalo de \NumNivelNoventaCinco\% (entre \NumExemploInfOitenta{} e
-    \NumExemploSupOitenta{} no de \NumNivelOitenta\%). Em
+    intervalo de \NumNivelMaior\% (entre \NumExemploInfOitenta{} e
+    \NumExemploSupOitenta{} no de \NumNivelMenor\%). Em
     \NumAnoFinal{} foram R\$ \NumExemploReceitaUltima{} milhões.}
   \label{fig:previsao}
 \end{figure}
@@ -669,7 +669,7 @@ fora, conferido nela e alargado até a cobertura chegar ao nível prometido
   \caption{A tendência dos \NumJanelaEscolhido{} últimos anos erra
     \NumErroEscolhidoTres\% a \NumHorizontes{} anos, contra
     \NumErroIngenuoTres\% de repetir o último valor. À direita, a cobertura
-    do intervalo de \NumNivelOitenta\% em cada origem deixada de fora:
+    do intervalo de \NumNivelMenor\% em cada origem deixada de fora:
     \NumCobOitentaPior\% em \NumCobOitentaPiorOrigem.}
   \label{fig:teste}
 \end{figure}
@@ -692,7 +692,7 @@ fora, conferido nela e alargado até a cobertura chegar ao nível prometido
     terminam antes de \NumAnoFinal.
   \item \textbf{Cobertura do Intervalo de previsão.} Com \NumOrigensTeste{}
     origens, o ajuste é grosseiro: na origem de \NumCobOitentaPiorOrigem,
-    o intervalo de \NumNivelOitenta\% cobriu \NumCobOitentaPior\%. O método
+    o intervalo de \NumNivelMenor\% cobriu \NumCobOitentaPior\%. O método
     não conhece mudança de lei, de alíquota, de convênio nem de gestão.
   \item \textbf{Acima da mediana não é melhor.} Gastar mais com saúde que
     a mediana não é, por si, bom nem ruim; por isso nenhum visual tem cor

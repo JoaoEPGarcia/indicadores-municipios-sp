@@ -125,6 +125,7 @@ def calcular():
     N.add('NumAnoPrevInicial', int(d['prev'].ano.min()), 'primeiro ano previsto')
     N.add('NumAnoPrevFinal', int(d['prev'].ano.max()), 'último ano previsto')
     N.add('NumMunicipiosComPrevisao', fmt_int(d['prev'].cod_ibge.nunique()), 'municípios com Previsão da receita')
+    numeros_do_readme(N, d)
 
     # Modelo semântico
     tabelas, relacoes, medidas = ler_tmdl()
@@ -239,6 +240,24 @@ def calcular():
     return N
 
 
+# ── números que só o README usa (ticket 06) ─────────────────────────────
+DATA_CONSULTA_FONTES = '14/10/2026'   # dia em que os textos de licença das fontes foram lidos (README, Fontes)
+PAGINAS_PBIR = RAIZ / 'powerbi' / 'painel-municipios-sp.Report' / 'definition' / 'pages' / 'pages.json'
+
+
+def numeros_do_readme(N, d):
+    """Os números que o README imprime e que nenhum outro bloco calcula."""
+    N.add('NumAnoBase', int(d['prev'].ano.min()) - 1, 'ano dos preços dos valores em reais (o anterior ao primeiro ano previsto)')
+    pib = d['fato'][d['fato'].indicador_id == 'pib_pc']
+    N.add('NumAnoFinalPib', int(pib.ano.max()), 'último ano do PIB dos Municípios na base')
+    paginas = json.loads(PAGINAS_PBIR.read_text(encoding='utf-8'))['pageOrder']
+    niveis = sorted(int(n) for n in d['cob'].nivel.unique())
+    N.add('NumNivelMenor', niveis[0], 'nível, em %, do Intervalo de previsão mais estreito', 'scripts/modelo.py')
+    N.add('NumNivelMaior', niveis[-1], 'nível, em %, do Intervalo de previsão mais largo', 'scripts/modelo.py')
+    N.add('NumPaginasPainel', len(paginas), 'páginas do painel do Power BI (pageOrder do PBIR)', 'scripts/gerar_relatorio_pbi.py')
+    N.add('NumDataConsultaFontes', DATA_CONSULTA_FONTES, 'data da leitura das condições de uso das fontes (constante registrada aqui)')
+
+
 # ── saídas ──────────────────────────────────────────────────────────────
 def onde_aparece(N):
     """Procura cada número nos textos e no registro das figuras."""
@@ -351,8 +370,6 @@ def numeros_do_relatorio(N):
     N.add('NumAnoCapa', hoje.year, 'ano da capa do relatório (o ano em que o registro foi gerado)')
 
     sql = (RAIZ / 'sql' / '20_indicadores.sql').read_text(encoding='utf-8')
-    base = re.search(r'CREATE VIEW v_fator_\d+ AS.*?WHERE ano = (\d{4})', sql, re.S).group(1)
-    N.add('NumAnoBaseReais', base, 'ano-base dos reais (IPCA médio do ano)', 'sql/20_indicadores.sql')
     baixo, alto = re.search(r'rc_liq\s*/\s*rc_liq_outros\s*<\s*([\d.]+)\s*OR\s*rc_liq\s*/\s*rc_liq_outros\s*>\s*([\d.]+)',
                             sql).groups()
     if abs(float(baixo) * float(alto) - 1) > 1e-9:
@@ -371,8 +388,6 @@ def numeros_do_relatorio(N):
     N.add('NumPastasMedidas', len(pastas), 'pastas de exibição das medidas DAX')
     for pasta, medidas in pastas.items():
         N.add(f'NumMedidasPasta{_camel(pasta)}', len(medidas), f'medidas DAX na pasta "{pasta}"')
-    paginas = [p for p in (RAIZ / 'powerbi' / 'painel-municipios-sp.Report' / 'definition' / 'pages').iterdir() if p.is_dir()]
-    N.add('NumPaginasPainel', len(paginas), 'páginas do painel no Power BI', 'scripts/gerar_relatorio_pbi.py')
 
     comp = RAIZ / 'powerbi' / 'resultado_conferencia_completa.csv'
     N.add('NumMedidasCompletas', len(list(csv.DictReader(open(comp, encoding='utf-8')))) if comp.exists() else PENDENTE,
@@ -392,8 +407,6 @@ def numeros_do_relatorio(N):
     N.add('NumHorizontes', int(met.horizonte.max()), 'anos à frente da Previsão da receita e do Teste contra o passado', 'scripts/modelo.py')
     N.add('NumJanelaEscolhido', janelas['tendencia3'], 'anos da tendência do método escolhido', 'scripts/modelo.py')
     N.add('NumJanelaReta', janelas['tendencia5'], 'anos da reta do método concorrente', 'scripts/modelo.py')
-    for nivel, nn in [(80, 'Oitenta'), (95, 'NoventaCinco')]:
-        N.add(f'NumNivel{nn}', nivel, 'nível de um Intervalo de previsão, em %', 'scripts/modelo.py')
 
 
 def formula_da_planilha(aba, celula):
@@ -501,8 +514,8 @@ def escrever_gerados_relatorio(N):
     _linhas(GERADOS / 'teste_metodos.tex', linhas)
 
     _linhas(GERADOS / 'cobertura.tex', [
-        f'\\NumNivel{nn}\\% & \\NumCob{nn}Sem\\% & \\NumEscala{nn} & \\NumCob{nn}Com\\% & '
-        f'\\NumCob{nn}Pior\\% (origem \\NumCob{nn}PiorOrigem)' for nn in ('Oitenta', 'NoventaCinco')])
+        f'\\NumNivel{nivel}\\% & \\NumCob{nn}Sem\\% & \\NumEscala{nn} & \\NumCob{nn}Com\\% & '
+        f'\\NumCob{nn}Pior\\% (origem \\NumCob{nn}PiorOrigem)' for nn, nivel in (('Oitenta', 'Menor'), ('NoventaCinco', 'Maior'))])
 
     _codigo(GERADOS / 'dax_mediana.tex', medida_dax('Mediana da faixa'))
     _codigo(GERADOS / 'dax_posicao.tex', medida_dax('Posição na faixa'))

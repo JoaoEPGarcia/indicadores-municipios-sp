@@ -82,8 +82,8 @@ def linha_de(texto, pos):
 # As exceções à regra do número digitado (GUIA_ESTILO.md, "A regra dos números"), decididas em
 # docs/adr/0002-excecoes-ao-numero-digitado.md. Esta é a lista única, e curta: cada entrada é um número
 # que faz parte de um NOME, de um comando ou da estrutura do texto, e não um resultado do estudo. Antes
-# de pôr uma entrada aqui, veja se o número não deveria sair de scripts/numeros.py. O ticket 06 (README
-# novo) acrescenta o que a seção de Fontes pedir, se pedir.
+# de pôr uma entrada aqui, veja se o número não deveria sair de scripts/numeros.py. A seção de Fontes do
+# README não pediu nenhuma (ADR 0002).
 EXCECOES = [re.compile(p, f) for p, f in [
     # código no README: comando, nome de arquivo, versão num comando. Bloco cercado por ``` e trecho
     # entre crases, nesta ordem
