@@ -338,6 +338,23 @@ class TesteCompilacao(unittest.TestCase):
         self.assertIn('relatorio/relatorio.tex:4', saida)
         self.assertIn('Undefined control sequence', saida)
 
+    def test_erro_de_latex_num_arquivo_incluido_aponta_esse_arquivo(self):
+        self.repo.escrever('relatorio/relatorio.tex', r'''
+            \documentclass{article}
+            \input{numeros.tex}
+            \begin{document}
+            \input{secoes/base}
+            \end{document}
+        ''')
+        self.repo.escrever('relatorio/secoes/base.tex', r'''
+            \section{A base}
+            São \NumMunicipios{} municípios. \comandoquenaoexiste
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('relatorio/secoes/base.tex:2', saida)
+        self.assertIn('Undefined control sequence', saida)
+
     def test_compilacao_que_passa_do_limite_de_tempo_falha_sem_traceback(self):
         self.repo.escrever('relatorio/relatorio.tex', r'''
             \documentclass{article}

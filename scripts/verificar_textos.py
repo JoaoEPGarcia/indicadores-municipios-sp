@@ -302,15 +302,32 @@ def conferir_publicacao(v, raiz, entregues):
 
 
 # ── compilação do relatório ─────────────────────────────────────────────
-def erros_do_log(log):
-    """Cada erro do pdfLaTeX ("! ...") com a linha do fonte ("l.12 ...") que vem logo depois."""
+# Com -file-line-error, o pdfLaTeX escreve o erro como "secoes/base.tex:2: Undefined control sequence.",
+# com o arquivo em que ele está, também dentro de \input e \include.
+ERRO_COM_ARQUIVO = re.compile(r'^(.+?\.(?:tex|sty|cls|def|cfg|ltx|aux)):(\d+): (.*)$')
+
+
+def caminho_no_repositorio(arquivo, pasta, raiz):
+    """O arquivo citado no log (relativo à pasta do relatório) como caminho do repositório."""
+    p = (pasta / arquivo).resolve()
+    return p.relative_to(raiz).as_posix() if p.is_relative_to(raiz) else arquivo
+
+
+def erros_do_log(log, pasta, raiz):
+    """(onde, mensagem) de cada erro do pdfLaTeX. O erro sem arquivo ("! ...") fica com a linha do fonte
+    ("l.12 ...") que vem logo depois, no relatório principal."""
     erros = []
     linhas = log.splitlines()
     for i, linha in enumerate(linhas):
-        # "!  ==> Fatal error" e "! Emergency stop" só repetem que o erro anterior parou a compilação
-        if linha.startswith('! ') and not linha.startswith(('!  ==>', '! Emergency stop')):
-            onde = next((m.group(1) for m in (re.match(r'l\.(\d+)', x) for x in linhas[i + 1:i + 15]) if m), '?')
-            erros.append((onde, linha))
+        m = ERRO_COM_ARQUIVO.match(linha)
+        if m:
+            arquivo, n, mensagem = m.groups()
+            # "==> Fatal error" e "Emergency stop" só repetem que o erro anterior parou a compilação
+            if not mensagem.lstrip().startswith(('==>', 'Emergency stop')):
+                erros.append((f'{caminho_no_repositorio(arquivo, pasta, raiz)}:{n}', mensagem))
+        elif linha.startswith('! ') and not linha.startswith(('!  ==>', '! Emergency stop')):
+            n = next((m.group(1) for m in (re.match(r'l\.(\d+)', x) for x in linhas[i + 1:i + 15]) if m), '?')
+            erros.append((f'{RELATORIO_TEX}:{n}', linha))
     return erros
 
 
@@ -322,7 +339,7 @@ def conferir_compilacao(v, raiz, limite):
     with tempfile.TemporaryDirectory() as saida:
         for passada in (1, 2):
             try:
-                r = subprocess.run(['pdflatex', '-interaction=nonstopmode', '-halt-on-error',
+                r = subprocess.run(['pdflatex', '-interaction=nonstopmode', '-halt-on-error', '-file-line-error',
                                     f'-output-directory={saida}', Path(RELATORIO_TEX).name],
                                    cwd=pasta, capture_output=True, timeout=limite)
             except FileNotFoundError:
@@ -334,10 +351,10 @@ def conferir_compilacao(v, raiz, limite):
                 return
             log = Path(saida, 'relatorio.log')
             log = log.read_text(encoding='utf-8', errors='replace') if log.exists() else r.stdout.decode(errors='replace')
-            erros = erros_do_log(log)
+            erros = erros_do_log(log, pasta, raiz)
             if r.returncode != 0 or erros:
-                erros = erros or [('?', f'pdflatex saiu com código {r.returncode}')]
-                v.falha(nome, [f'{RELATORIO_TEX}:{onde}: {erro} (passada {passada})' for onde, erro in erros])
+                erros = erros or [(RELATORIO_TEX, f'pdflatex saiu com código {r.returncode}')]
+                v.falha(nome, [f'{onde}: {erro} (passada {passada})' for onde, erro in erros])
                 return
         shutil.copyfile(Path(saida, 'relatorio.pdf'), raiz / RELATORIO_PDF)
     v.ok(nome)
