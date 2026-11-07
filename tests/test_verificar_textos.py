@@ -215,6 +215,16 @@ class TesteVerificador(unittest.TestCase):
         self.assertIn('powerbi/roteiro.md:3', saida)
         self.assertIn('publicado na web', saida)
 
+    def test_publicacao_na_web_no_readme_e_acusada_uma_vez(self):
+        self.repo.escrever('README.md', '''
+            # Indicadores
+
+            O painel foi publicado na web.
+        ''', versionar=True)
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertEqual(saida.count('README.md:3'), 1, saida)
+
     def test_texto_que_nega_a_publicacao_passa(self):
         self.repo.escrever('GLOSSARY.md', '''
             # Glossário

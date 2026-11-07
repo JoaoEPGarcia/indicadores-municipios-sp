@@ -305,16 +305,18 @@ def conferir_compilacao(v, raiz, limite):
 
 
 # ── o texto que o leitor vê: PDF e README montado ───────────────────────
-def conferir_texto_final(v, caminho, paginas):
-    """paginas: [(onde, texto)]. Falha se o leitor veria PENDENTE, um marcador que sobrou ou a frase
-    de publicação na web."""
-    nome = f'{caminho} não mostra {PENDENTE}, marcador sobrando nem publicação na web'
+def conferir_texto_final(v, caminho, paginas, publicacao):
+    """paginas: [(onde, texto)]. Falha se o leitor veria PENDENTE ou um marcador que sobrou e, com
+    publicacao=True, a frase de publicação na web. O README é texto versionado, e a conferência da
+    publicação já o lê; o PDF não, e só aqui se procura a frase nele."""
+    nome = f'{caminho} não mostra {PENDENTE}, marcador sobrando' + (' nem publicação na web' if publicacao else '')
     problemas = []
     for onde, texto in paginas:
         linhas = texto.splitlines()
         for m in re.finditer(PENDENTE + '|' + MARCADOR, texto):
             problemas.append(f'{onde}: "{m.group(0)}" em: {linhas[linha_de(texto, m.start()) - 1].strip()}')
-        problemas += [f'{onde}: publicação na web em: {trecho}' for _, trecho in frases_de_publicacao(texto)]
+        if publicacao:
+            problemas += [f'{onde}: publicação na web em: {trecho}' for _, trecho in frases_de_publicacao(texto)]
     if problemas:
         v.falha(nome, problemas)
     else:
@@ -334,7 +336,7 @@ def conferir_pdf(v, raiz):
     except Exception as e:  # PDF corrompido ou truncado: o pymupdf tem vários tipos de erro
         v.falha(f'{RELATORIO_PDF} legível', [f'o pymupdf não abriu o PDF: {e}'])
         return
-    conferir_texto_final(v, RELATORIO_PDF, paginas)
+    conferir_texto_final(v, RELATORIO_PDF, paginas, publicacao=True)
 
 
 # ── a verificação ───────────────────────────────────────────────────────
@@ -355,7 +357,8 @@ def verificar(raiz, limite_pdflatex=600):
     conferir_publicacao(v, raiz, sorted(set(textos_versionados(raiz)) | set(entregues)))
     if (raiz / README).exists():
         linhas = (raiz / README).read_text(encoding='utf-8').splitlines()
-        conferir_texto_final(v, README, [(f'{README}:{i}', t) for i, t in enumerate(linhas, start=1)])
+        conferir_texto_final(v, README, [(f'{README}:{i}', t) for i, t in enumerate(linhas, start=1)],
+                             publicacao=False)
     if (raiz / RELATORIO_TEX).exists():
         conferir_compilacao(v, raiz, limite_pdflatex)
     else:
