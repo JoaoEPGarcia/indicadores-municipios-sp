@@ -22,6 +22,7 @@ REPO = Path(__file__).resolve().parent.parent
 SCRIPT = REPO / 'scripts' / 'montar_excel.py'
 sys.path.insert(0, str(REPO / 'scripts'))
 import comum  # noqa: E402
+from apoio import Copia  # noqa: E402
 
 
 def formula(celula):
@@ -156,6 +157,22 @@ class PlanilhaGerada(unittest.TestCase):
         usados = json.loads((self.saida.parent / 'numeros_usados.json').read_text(encoding='utf-8'))
         self.assertIn('NumExemplo', usados[self.saida.name])
 
+
+
+class SoComOsDados(unittest.TestCase):
+    """A planilha sai só de dados/tratados/: o construtor roda antes do painel, das conferências e da conferência
+    da base existirem (numa cópia do repositório sem esses arquivos)."""
+
+    def test_monta_sem_as_paginas_do_painel_sem_as_conferencias_e_sem_a_conferencia_da_base(self):
+        copia = Copia()
+        self.addCleanup(copia.fechar)
+        for rel in ['powerbi/painel-municipios-sp.Report/definition/pages/pages.json', 'dados/tratados/validacao.txt',
+                    'powerbi/resultado_conferencia.csv', 'powerbi/resultado_conferencia_completa.csv',
+                    'excel/resultado_conferencia_excel.json', 'powerbi/conferencia.md']:
+            (copia.raiz / rel).unlink()
+        codigo, saida = copia.rodar('montar_excel.py', '--saida', copia.raiz / 'saida' / 'painel.xlsx')
+        self.assertEqual(codigo, 0, saida)
+        self.assertTrue((copia.raiz / 'saida' / 'painel.xlsx').exists())
 
 if __name__ == '__main__':
     unittest.main()
