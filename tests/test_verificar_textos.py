@@ -79,6 +79,67 @@ class TesteVerificador(unittest.TestCase):
         self.assertIn('docs/README.modelo.md:3', saida)
         self.assertIn('869', saida)
 
+    def test_modelo_no_formato_do_kit_passa(self):
+        # Estrutura do README_modelo.md do kit: comentário, lista numerada (com subitens), código,
+        # links, caminhos de arquivo e anos em nome de fonte, da lista de exceções.
+        self.repo.escrever('docs/README.modelo.md', '''
+            <!-- Modelo do README. Rode scripts/numeros.py: 1 passo só. -->
+            # Indicadores dos {{NumMunicipios}} municípios de SP
+
+            | | |
+            |---|---|
+            | **Dados** | {{NumLinhasFato}} linhas, de {{NumAnoInicial}} a {{NumAnoFinal}} |
+
+            Faixas de porte do Censo 2022; ver a [Figura](graficos/01-painel-municipio.png) e o
+            arquivo 03-previsao.png.
+
+            1. **Seleção.** Critérios:
+               1. valor positivo;
+               2. dentro de um quarto a quatro vezes a média.
+            2. **Conferência.** Ver `scripts/validar.py` e `dados/tratados/backtest_2015.csv`.
+
+            ```bash
+            python scripts/coletar_siconfi_ibge.py 2015 2025
+            ```
+
+            ![Painel](graficos/02-municipio-na-faixa.png) · [LinkedIn](https://www.linkedin.com/in/x-123/)
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 0, saida)
+
+    def test_marcador_que_nao_existe_no_registro_falha(self):
+        self.repo.escrever('docs/README.modelo.md', '''
+            # Indicadores dos {{NumMunicipios}} municípios de SP
+
+            Foram {{NumCidades}} cidades.
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('docs/README.modelo.md:3', saida)
+        self.assertIn('NumCidades', saida)
+
+    def test_numero_pendente_usado_no_modelo_falha(self):
+        self.repo.escrever('docs/README.modelo.md', '''
+            # Indicadores dos {{NumMunicipios}} municípios de SP
+
+            Batem {{NumCelulasBatem}} células.
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('docs/README.modelo.md:3', saida)
+        self.assertIn('NumCelulasBatem', saida)
+        self.assertIn('PENDENTE', saida)
+
+    def test_numero_pendente_usado_numa_figura_falha(self):
+        self.repo.escrever('graficos/numeros_usados.json', '''
+            {"01-painel-municipio.png": ["NumMunicipios", "NumCelulasBatem"]}
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('graficos/numeros_usados.json', saida)
+        self.assertIn('01-painel-municipio.png', saida)
+        self.assertIn('NumCelulasBatem', saida)
+
 
 if __name__ == '__main__':
     unittest.main()
