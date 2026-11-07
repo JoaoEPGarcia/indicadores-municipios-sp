@@ -7,6 +7,7 @@ Cada teste monta um repositório pequeno numa pasta temporária, com os arquivos
 roda, e olha só o código de saída e a mensagem.
 """
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -14,7 +15,9 @@ import textwrap
 import unittest
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parent.parent / 'scripts' / 'verificar_textos.py'
+REPO = Path(__file__).resolve().parent.parent
+SCRIPT = REPO / 'scripts' / 'verificar_textos.py'
+MODELO_DO_KIT = REPO / 'estilo' / 'modelo_relatorio.tex'
 
 # A saída do registro de números (relatorio/numeros.tex), como scripts/numeros.py a escreve.
 REGISTRO = textwrap.dedent(r'''
@@ -139,6 +142,38 @@ class TesteVerificador(unittest.TestCase):
         self.assertIn('graficos/numeros_usados.json', saida)
         self.assertIn('01-painel-municipio.png', saida)
         self.assertIn('NumCelulasBatem', saida)
+
+    def test_numero_digitado_no_latex_falha_com_arquivo_e_linha(self):
+        self.repo.escrever('relatorio/secao.tex', r'''
+            \section{A base}
+            São \NumMunicipios{} municípios, de \NumAnoInicial{} a \NumAnoFinal.
+            A planilha tem 869 fórmulas.
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('relatorio/secao.tex:3', saida)
+        self.assertIn('869', saida)
+
+    def test_macro_que_nao_existe_no_registro_falha(self):
+        self.repo.escrever('relatorio/secao.tex', r'''
+            \section{A base}
+            São \NumCidades{} cidades.
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('relatorio/secao.tex:2', saida)
+        self.assertIn('NumCidades', saida)
+
+    def test_modelo_de_relatorio_do_kit_nao_acusa_numero_digitado(self):
+        # Preâmbulo do kit, capa com TikZ, medidas, \imagemplena[0.86], \linhasde: nada disso é
+        # número do estudo. O registro de brinquedo traz as macros que o modelo usa.
+        modelo = MODELO_DO_KIT.read_text(encoding='utf-8')
+        macros = sorted(set(re.findall(r'\\(Num[A-Za-z]+)', modelo)))
+        self.repo.escrever('relatorio/numeros.tex',
+                           '% GERADO por scripts/numeros.py.\n' + ''.join(f'\\newcommand{{\\{m}}}{{1}}\n' for m in macros))
+        self.repo.escrever('relatorio/secao.tex', modelo)
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 0, saida)
 
 
 if __name__ == '__main__':
