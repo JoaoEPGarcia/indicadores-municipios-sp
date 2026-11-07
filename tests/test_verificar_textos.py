@@ -95,7 +95,8 @@ class TesteVerificador(unittest.TestCase):
             | **Dados** | {{NumLinhasFato}} linhas, de {{NumAnoInicial}} a {{NumAnoFinal}} |
 
             Faixas de porte do Censo 2022; ver a [Figura](graficos/01-painel-municipio.png) e o
-            arquivo 03-previsao.png.
+            arquivo 03-previsao.png. Ideb sob CC BY 4.0, pela Portaria Inep nº 380/2020; o site
+            do Ministério traz CC BY-ND 3.0.
 
             1. **Seleção.** Critérios:
                1. valor positivo;

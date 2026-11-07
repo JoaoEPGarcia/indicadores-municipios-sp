@@ -75,6 +75,8 @@ EXCECOES = [
     r'\bCenso(?: Demográfico| Escolar)? \d{4}\b',
     # número de ato normativo: "Portaria STN nº 642/2019", "Lei 12.527/2011"
     r'\b(?:Lei|Portaria|Decreto|Resolução)\b[^\d\n]{0,20}[\d./]+',
+    # versão no nome de uma licença: "CC BY 4.0", "CC BY-ND 3.0" (seção de Fontes e licenças)
+    r'\bCC BY(?:-[A-Z]{2})*\s+\d\.\d\b',
     # nome de arquivo: "01-painel-municipio.png", "backtest_2015.csv"
     r'[\w.-]*\d[\w.-]*\.(?:csv|png|pdf|tex|md|py|json|sqlite|xlsx|tmdl|pbip|sql)\b',
     # data da capa do relatório: metadado do documento, e não número do estudo
