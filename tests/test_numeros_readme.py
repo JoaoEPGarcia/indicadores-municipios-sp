@@ -4,8 +4,8 @@
 
 O registro é lido como os outros scripts o leem (numeros.calcular(), o mesmo que scripts/graficos.py chama).
 Os valores esperados vêm de fora do código: o ano do último PIB municipal está em dados/tratados/validacao.txt
-(a tabela de cobertura mostra PIB até 2023), a ordem das páginas está em powerbi/roteiro.md (quatro páginas) e
-a data da leitura das licenças é a do README antigo (seção "Fontes e licenças").
+(a tabela de cobertura mostra PIB até 2023), a ordem das páginas está em powerbi/roteiro.md (quatro páginas), os
+níveis do Intervalo de previsão estão no GLOSSARY.md e a data da leitura das licenças é a do README antigo (seção "Fontes e licenças").
 """
 import sys
 import unittest
@@ -33,6 +33,10 @@ class NumerosDoReadme(unittest.TestCase):
 
     def test_paginas_do_painel(self):
         self.assertEqual(self.valor('NumPaginasPainel'), '4')
+
+    def test_niveis_do_intervalo_de_previsao(self):
+        # os dois níveis do glossário: "O intervalo de 80% ou de 95%"
+        self.assertEqual((self.valor('NumNivelMenor'), self.valor('NumNivelMaior')), ('80', '95'))
 
     def test_data_da_leitura_das_licencas(self):
         self.assertEqual(self.valor('NumDataConsultaFontes'), '14/10/2026')

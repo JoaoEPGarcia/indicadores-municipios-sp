@@ -250,6 +250,9 @@ def numeros_do_readme(N, d):
     pib = d['fato'][d['fato'].indicador_id == 'pib_pc']
     N.add('NumAnoFinalPib', int(pib.ano.max()), 'último ano do PIB dos Municípios na base')
     paginas = json.loads(PAGINAS_PBIR.read_text(encoding='utf-8'))['pageOrder']
+    niveis = sorted(int(n) for n in d['cob'].nivel.unique())
+    N.add('NumNivelMenor', niveis[0], 'nível, em %, do Intervalo de previsão mais estreito', 'scripts/modelo.py')
+    N.add('NumNivelMaior', niveis[-1], 'nível, em %, do Intervalo de previsão mais largo', 'scripts/modelo.py')
     N.add('NumPaginasPainel', len(paginas), 'páginas do painel do Power BI (pageOrder do PBIR)', 'scripts/gerar_relatorio_pbi.py')
     N.add('NumDataConsultaFontes', DATA_CONSULTA_FONTES, 'data da leitura das condições de uso das fontes (constante registrada aqui)')
 
