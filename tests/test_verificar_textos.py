@@ -207,14 +207,24 @@ class TesteVerificador(unittest.TestCase):
 
     def test_modelo_de_relatorio_do_kit_nao_acusa_numero_digitado(self):
         # Preâmbulo do kit, capa com TikZ, medidas, \imagemplena[0.86], \linhasde: nada disso é
-        # número do estudo. O registro de brinquedo traz as macros que o modelo usa.
-        modelo = MODELO_DO_KIT.read_text(encoding='utf-8')
+        # número do estudo. O registro de brinquedo traz as macros que o modelo usa. A data da capa vem
+        # do registro, como o ticket 07 pede: \DataCapa passa a usar uma macro.
+        modelo = re.sub(r'(\\newcommand\{\\DataCapa\}\{)[^}]*\}', r'\1\\NumDataCapa}',
+                        MODELO_DO_KIT.read_text(encoding='utf-8'))
         macros = sorted(set(re.findall(r'\\(Num[A-Za-z]+)', modelo)))
         self.repo.escrever('relatorio/numeros.tex',
                            '% GERADO por scripts/numeros.py.\n' + ''.join(f'\\newcommand{{\\{m}}}{{1}}\n' for m in macros))
         self.repo.escrever('relatorio/secao.tex', modelo)
         codigo, saida = self.repo.verificar()
         self.assertEqual(codigo, 0, saida)
+
+    def test_data_da_capa_digitada_falha(self):
+        self.repo.escrever('relatorio/capa.tex', r'''
+            \newcommand{\DataCapa}{Novembro de 2026}
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('relatorio/capa.tex:1: número digitado "2026"', saida)
 
     def test_texto_versionado_dizendo_que_o_painel_foi_publicado_na_web_falha(self):
         self.repo.escrever('powerbi/roteiro.md', '''

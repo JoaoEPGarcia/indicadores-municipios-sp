@@ -82,8 +82,6 @@ EXCECOES = [
     r'\bCC BY(?:-[A-Z]{2})*\s+\d\.\d\b',
     # nome de arquivo: "01-painel-municipio.png", "backtest_2015.csv"
     r'[\w.-]*\d[\w.-]*\.(?:csv|png|pdf|tex|md|py|json|sqlite|xlsx|tmdl|pbip|sql)\b',
-    # data da capa do relatório: metadado do documento, e não número do estudo
-    r'\\newcommand\{\\DataCapa\}\{[^}]*\}',
 ]
 
 # O que, no Markdown, não é texto corrido: o leitor não vê ali um número do estudo.
