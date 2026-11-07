@@ -125,6 +125,7 @@ def calcular():
     N.add('NumAnoPrevInicial', int(d['prev'].ano.min()), 'primeiro ano previsto')
     N.add('NumAnoPrevFinal', int(d['prev'].ano.max()), 'último ano previsto')
     N.add('NumMunicipiosComPrevisao', fmt_int(d['prev'].cod_ibge.nunique()), 'municípios com Previsão da receita')
+    numeros_do_readme(N, d)
 
     # Modelo semântico
     tabelas, relacoes, medidas = ler_tmdl()
@@ -236,6 +237,21 @@ def calcular():
                            ('NumMunicipiosExcel', 'municípios testados na planilha')]:
             N.add(nome, PENDENTE, desc, 'scripts/conferir_excel.py')
     return N
+
+
+# ── números que só o README usa (ticket 06) ─────────────────────────────
+DATA_CONSULTA_FONTES = '14/10/2026'   # dia em que os textos de licença das fontes foram lidos (README, Fontes)
+PAGINAS_PBIR = RAIZ / 'powerbi' / 'painel-municipios-sp.Report' / 'definition' / 'pages' / 'pages.json'
+
+
+def numeros_do_readme(N, d):
+    """Os números que o README imprime e que nenhum outro bloco calcula."""
+    N.add('NumAnoBase', int(d['prev'].ano.min()) - 1, 'ano dos preços dos valores em reais (o anterior ao primeiro ano previsto)')
+    pib = d['fato'][d['fato'].indicador_id == 'pib_pc']
+    N.add('NumAnoFinalPib', int(pib.ano.max()), 'último ano do PIB dos Municípios na base')
+    paginas = json.loads(PAGINAS_PBIR.read_text(encoding='utf-8'))['pageOrder']
+    N.add('NumPaginasPainel', len(paginas), 'páginas do painel do Power BI (pageOrder do PBIR)', 'scripts/gerar_relatorio_pbi.py')
+    N.add('NumDataConsultaFontes', DATA_CONSULTA_FONTES, 'data da leitura das condições de uso das fontes (constante registrada aqui)')
 
 
 # ── saídas ──────────────────────────────────────────────────────────────
