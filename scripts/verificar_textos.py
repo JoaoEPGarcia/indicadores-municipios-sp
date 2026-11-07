@@ -2,20 +2,35 @@
 
     python scripts/verificar_textos.py
 
-Roda na raiz do repositório. Sai com código 0 quando tudo passa e 1 quando algo falha; cada falha
-aponta o arquivo, a linha e o trecho. Quando o modelo do README, o relatório ou o PDF ainda não
-existem, a verificação correspondente é pulada e o comando diz isso.
+Roda na raiz do repositório (rode antes scripts/numeros.py, que escreve relatorio/numeros.tex). Sai com
+código 0 quando tudo passa e 1 quando algo falha; cada falha aponta o arquivo, a linha e o trecho.
+
+Falha quando:
+  - um número usado (marcador {{NumX}} do modelo do README, macro \\NumX do LaTeX, número registrado
+    pelas figuras e pela planilha em numeros_usados.json) está PENDENTE ou não existe no registro;
+  - há número digitado, fora de marcador ou macro, em docs/README.modelo.md ou num .tex de relatorio/
+    (exceções na lista EXCECOES, abaixo; o preâmbulo do kit e os .tex gerados não se leem);
+  - algum texto versionado (.md, .tex, .txt), o README ou o PDF diz que o painel foi publicado na web;
+  - o README montado ou o PDF mostram PENDENTE ou um marcador que sobrou;
+  - relatorio/relatorio.tex não compila em pdfLaTeX, nas duas passadas, sem erro. Compilado, o PDF
+    vai para relatorio/relatorio.pdf.
+
+Quando o modelo do README, o relatório ou o PDF ainda não existem, a verificação correspondente é
+pulada e o comando diz isso. Os testes ficam em tests/ (python -m unittest discover -s tests).
 """
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 
 MODELO_README = 'docs/README.modelo.md'
+README = 'README.md'                    # montado por scripts/numeros.py a partir do modelo
 RELATORIO_TEX = 'relatorio/relatorio.tex'
 RELATORIO_PDF = 'relatorio/relatorio.pdf'
 REGISTRO = 'relatorio/numeros.tex'      # a saída do registro de números (scripts/numeros.py)
@@ -245,6 +260,63 @@ def conferir_publicacao(v, raiz, caminhos):
         v.ok(f'{nome} ({len(caminhos)} arquivos)')
 
 
+# ── compilação do relatório ─────────────────────────────────────────────
+def erros_do_log(log):
+    """Cada erro do pdfLaTeX ("! ...") com a linha do fonte ("l.12 ...") que vem logo depois."""
+    erros = []
+    linhas = log.splitlines()
+    for i, linha in enumerate(linhas):
+        # "!  ==> Fatal error" e "! Emergency stop" só repetem que o erro anterior parou a compilação
+        if linha.startswith('! ') and not linha.startswith(('!  ==>', '! Emergency stop')):
+            onde = next((m.group(1) for m in (re.match(r'l\.(\d+)', x) for x in linhas[i + 1:i + 15]) if m), '?')
+            erros.append((onde, linha))
+    return erros
+
+
+def conferir_compilacao(v, raiz):
+    """Compila relatorio/relatorio.tex em duas passadas, como o kit manda. Os arquivos auxiliares ficam
+    numa pasta temporária; o PDF vai para relatorio/relatorio.pdf."""
+    nome = f'{RELATORIO_TEX} compila em pdfLaTeX, duas passadas, sem erro'
+    pasta = (raiz / RELATORIO_TEX).parent
+    with tempfile.TemporaryDirectory() as saida:
+        for passada in (1, 2):
+            r = subprocess.run(['pdflatex', '-interaction=nonstopmode', '-halt-on-error',
+                                f'-output-directory={saida}', Path(RELATORIO_TEX).name],
+                               cwd=pasta, capture_output=True, timeout=600)
+            log = Path(saida, 'relatorio.log')
+            log = log.read_text(encoding='utf-8', errors='replace') if log.exists() else r.stdout.decode(errors='replace')
+            erros = erros_do_log(log)
+            if r.returncode != 0 or erros:
+                erros = erros or [('?', f'pdflatex saiu com código {r.returncode}')]
+                v.falha(nome, [f'{RELATORIO_TEX}:{onde}: {erro} (passada {passada})' for onde, erro in erros])
+                return
+        shutil.copyfile(Path(saida, 'relatorio.pdf'), raiz / RELATORIO_PDF)
+    v.ok(nome)
+
+
+# ── o texto que o leitor vê: PDF e README montado ───────────────────────
+def conferir_texto_final(v, caminho, paginas):
+    """paginas: [(onde, texto)]. Falha se o leitor veria PENDENTE, um marcador que sobrou ou a frase
+    de publicação na web."""
+    nome = f'{caminho} não mostra {PENDENTE}, marcador sobrando nem publicação na web'
+    problemas = []
+    for onde, texto in paginas:
+        linhas = texto.splitlines()
+        for m in re.finditer(PENDENTE + '|' + MARCADOR, texto):
+            problemas.append(f'{onde}: "{m.group(0)}" em: {linhas[linha_de(texto, m.start()) - 1].strip()}')
+        problemas += [f'{onde}: publicação na web em: {trecho}' for _, trecho in frases_de_publicacao(texto)]
+    if problemas:
+        v.falha(nome, problemas)
+    else:
+        v.ok(nome)
+
+
+def paginas_do_pdf(raiz):
+    import pymupdf  # só aqui: sem PDF, o verificador roda sem a biblioteca
+    with pymupdf.open(raiz / RELATORIO_PDF) as doc:
+        return [(f'{RELATORIO_PDF}, página {i}', p.get_text()) for i, p in enumerate(doc, start=1)]
+
+
 # ── a verificação ───────────────────────────────────────────────────────
 def verificar(raiz):
     v = Verificacao()
@@ -259,11 +331,18 @@ def verificar(raiz):
         usos += usos_no_latex(raiz, caminho)
     conferir_registro(v, raiz, usos)
     # os versionados e, mesmo antes do primeiro commit, os textos entregues
-    entregues = [c for c in (MODELO_README, 'README.md') if (raiz / c).exists()] + textos_latex(raiz)
+    entregues = [c for c in (MODELO_README, README) if (raiz / c).exists()] + textos_latex(raiz)
     conferir_publicacao(v, raiz, sorted(set(textos_versionados(raiz)) | set(entregues)))
-    if not (raiz / RELATORIO_TEX).exists():
+    if (raiz / README).exists():
+        linhas = (raiz / README).read_text(encoding='utf-8').splitlines()
+        conferir_texto_final(v, README, [(f'{README}:{i}', t) for i, t in enumerate(linhas, start=1)])
+    if (raiz / RELATORIO_TEX).exists():
+        conferir_compilacao(v, raiz)
+    else:
         v.pulada('compilação do relatório', f'{RELATORIO_TEX} ainda não existe')
-    if not (raiz / RELATORIO_PDF).exists():
+    if (raiz / RELATORIO_PDF).exists():
+        conferir_texto_final(v, RELATORIO_PDF, paginas_do_pdf(raiz))
+    else:
         v.pulada('texto do PDF', f'{RELATORIO_PDF} ainda não existe')
     return v
 

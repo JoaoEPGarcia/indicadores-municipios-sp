@@ -8,6 +8,7 @@ roda, e olha só o código de saída e a mensagem.
 """
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -143,6 +144,17 @@ class TesteVerificador(unittest.TestCase):
         self.assertIn('01-painel-municipio.png', saida)
         self.assertIn('NumCelulasBatem', saida)
 
+    def test_readme_montado_que_mostra_pendente_falha(self):
+        self.repo.escrever('README.md', '''
+            # Indicadores dos 645 municípios de SP
+
+            Batem PENDENTE células.
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('README.md:3', saida)
+        self.assertIn('PENDENTE', saida)
+
     def test_numero_digitado_no_latex_falha_com_arquivo_e_linha(self):
         self.repo.escrever('relatorio/secao.tex', r'''
             \section{A base}
@@ -194,6 +206,56 @@ class TesteVerificador(unittest.TestCase):
         ''', versionar=True)
         codigo, saida = self.repo.verificar()
         self.assertEqual(codigo, 0, saida)
+
+
+@unittest.skipUnless(shutil.which('pdflatex'), 'pdflatex não está no PATH')
+class TesteCompilacao(unittest.TestCase):
+    """Com um relatório presente, o comando compila o PDF (pdfLaTeX, duas passadas)."""
+
+    def setUp(self):
+        self.repo = Repositorio()
+        self.addCleanup(self.repo.fechar)
+
+    def test_relatorio_que_compila_passa_e_deixa_o_pdf(self):
+        self.repo.escrever('relatorio/relatorio.tex', r'''
+            \documentclass{article}
+            \input{numeros.tex}
+            \begin{document}
+            \section{A base}\label{sec:base}
+            São \NumMunicipios{} municípios (Seção~\ref{sec:base}).
+            \end{document}
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 0, saida)
+        self.assertIn('[OK] relatorio/relatorio.tex compila', saida)
+        self.assertTrue((self.repo.raiz / 'relatorio' / 'relatorio.pdf').exists())
+
+    def test_relatorio_com_erro_de_latex_falha(self):
+        self.repo.escrever('relatorio/relatorio.tex', r'''
+            \documentclass{article}
+            \input{numeros.tex}
+            \begin{document}
+            São \NumMunicipios{} municípios. \comandoquenaoexiste
+            \end{document}
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('relatorio/relatorio.tex:4', saida)
+        self.assertIn('Undefined control sequence', saida)
+
+    def test_pdf_que_imprime_pendente_falha(self):
+        # Um PENDENTE que escapou para o PDF, por um caminho que não é macro (texto colado de outro lugar).
+        self.repo.escrever('relatorio/relatorio.tex', r'''
+            \documentclass{article}
+            \input{numeros.tex}
+            \begin{document}
+            São \NumMunicipios{} municípios. Conferência: PENDENTE.
+            \end{document}
+        ''')
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('relatorio/relatorio.pdf, página 1', saida)
+        self.assertIn('PENDENTE', saida)
 
 
 if __name__ == '__main__':
