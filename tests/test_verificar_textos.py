@@ -175,6 +175,26 @@ class TesteVerificador(unittest.TestCase):
         codigo, saida = self.repo.verificar()
         self.assertEqual(codigo, 0, saida)
 
+    def test_texto_versionado_dizendo_que_o_painel_foi_publicado_na_web_falha(self):
+        self.repo.escrever('powerbi/roteiro.md', '''
+            # Roteiro
+
+            Depois de montado, o painel foi publicado na web e pode ser aberto pelo link.
+        ''', versionar=True)
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 1, saida)
+        self.assertIn('powerbi/roteiro.md:3', saida)
+        self.assertIn('publicado na web', saida)
+
+    def test_texto_que_nega_a_publicacao_passa(self):
+        self.repo.escrever('GLOSSARY.md', '''
+            # Glossário
+
+            O painel não foi publicado na web: abre-se no Power BI Desktop.
+        ''', versionar=True)
+        codigo, saida = self.repo.verificar()
+        self.assertEqual(codigo, 0, saida)
+
 
 if __name__ == '__main__':
     unittest.main()

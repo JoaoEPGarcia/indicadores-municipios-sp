@@ -9,6 +9,7 @@ existem, a verificação correspondente é pulada e o comando diz isso.
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -193,6 +194,57 @@ def conferir_registro(v, raiz, usos):
         v.ok(nome)
 
 
+# ── "publicado na web" ──────────────────────────────────────────────────
+# O painel abre no Power BI Desktop e não foi publicado (spec, Out of Scope). Nenhum texto diz o contrário.
+PUBLICACAO = re.compile('|'.join([
+    r'publicad[oa]s?\s+(?:na|em)\s+(?:web|internet)',
+    r'publicad[oa]s?\s+no\s+(?:Power\s+BI\s+)?Service',
+    r'publish(?:ed)?\s+to\s+(?:the\s+)?web',
+    r'published\s+(?:on|to)\s+(?:the\s+)?(?:internet|Power\s+BI\s+Service)',
+    r'app\.powerbi\.com/view',              # link de "Publicar na Web"
+]), re.I)
+# Frase que nega ("o painel não foi publicado na web") não afirma a publicação.
+NEGACAO = re.compile(r'\b(?:não|nunca|nada|nem|jamais|not|never|nothing)\b', re.I)
+EXTENSOES_DE_TEXTO = ('.md', '.tex', '.txt')
+
+
+def frases_de_publicacao(texto):
+    """(linha, trecho) de cada frase que afirma que o painel foi publicado na web."""
+    achados = []
+    linhas = texto.splitlines()
+    for m in PUBLICACAO.finditer(texto):
+        inicio = max(texto.rfind(c, 0, m.start()) for c in ('. ', '! ', '? ', '\n\n'))
+        if NEGACAO.search(texto, max(inicio, 0), m.start()):
+            continue
+        n = linha_de(texto, m.start())
+        achados.append((n, linhas[n - 1].strip()))
+    return achados
+
+
+def textos_versionados(raiz):
+    """Os arquivos de texto do repositório (git ls-files). Fora de um repositório git, todos os que não
+    estão em pasta oculta (.git, .venv, .scratch)."""
+    r = subprocess.run(['git', 'ls-files', '-z'], cwd=raiz, capture_output=True)
+    if r.returncode == 0:
+        caminhos = [c for c in r.stdout.decode('utf-8').split('\0') if c]
+    else:
+        caminhos = [p.relative_to(raiz).as_posix() for p in raiz.rglob('*')
+                    if p.is_file() and not any(parte.startswith('.') for parte in p.relative_to(raiz).parts)]
+    return sorted(c for c in caminhos if c.endswith(EXTENSOES_DE_TEXTO) and (raiz / c).exists())
+
+
+def conferir_publicacao(v, raiz, caminhos):
+    nome = 'nenhum texto diz que o painel foi publicado na web'
+    problemas = []
+    for caminho in caminhos:
+        texto = (raiz / caminho).read_text(encoding='utf-8', errors='replace')
+        problemas += [f'{caminho}:{n}: {trecho}' for n, trecho in frases_de_publicacao(texto)]
+    if problemas:
+        v.falha(nome, problemas)
+    else:
+        v.ok(f'{nome} ({len(caminhos)} arquivos)')
+
+
 # ── a verificação ───────────────────────────────────────────────────────
 def verificar(raiz):
     v = Verificacao()
@@ -206,6 +258,9 @@ def verificar(raiz):
         conferir_digitados(v, raiz, caminho)
         usos += usos_no_latex(raiz, caminho)
     conferir_registro(v, raiz, usos)
+    # os versionados e, mesmo antes do primeiro commit, os textos entregues
+    entregues = [c for c in (MODELO_README, 'README.md') if (raiz / c).exists()] + textos_latex(raiz)
+    conferir_publicacao(v, raiz, sorted(set(textos_versionados(raiz)) | set(entregues)))
     if not (raiz / RELATORIO_TEX).exists():
         v.pulada('compilação do relatório', f'{RELATORIO_TEX} ainda não existe')
     if not (raiz / RELATORIO_PDF).exists():
