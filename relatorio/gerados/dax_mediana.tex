@@ -1,0 +1,13 @@
+% GERADO por scripts/numeros.py. Não edite à mão: rode o script de novo.
+\begin{verbatim}
+Mediana da faixa =
+  IF (
+    HASONEVALUE ( dim_municipio[faixa_porte] )
+      && HASONEVALUE ( dim_ano[ano] )
+      && HASONEVALUE ( dim_indicador[indicador_id] ),
+    CALCULATE (
+      MAX ( ref_faixa[mediana] ),
+      TREATAS ( VALUES ( dim_municipio[faixa_porte] ), ref_faixa[faixa_porte] )
+    )
+  )
+\end{verbatim}

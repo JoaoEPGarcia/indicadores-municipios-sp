@@ -1,0 +1,7 @@
+% GERADO por scripts/numeros.py. Não edite à mão: rode o script de novo.
+\texttt{fato\_indicador} & fato & município, ano e Indicador & \NumLinhasFato & \texttt{dim\_ano}, \texttt{dim\_indicador}, \texttt{dim\_municipio} \\
+\texttt{ref\_faixa} & fato & Faixa de porte, ano e Indicador & \NumLinhasRefFaixa & \texttt{dim\_ano}, \texttt{dim\_indicador} \\
+\texttt{previsao} & fato & município e ano previsto & \NumLinhasPrevisao & \texttt{dim\_ano}, \texttt{dim\_municipio} \\
+\texttt{dim\_municipio} & dimensão & município & \NumMunicipios & \texttt{fato\_indicador}, \texttt{previsao} \\
+\texttt{dim\_indicador} & dimensão & Indicador & \NumIndicadores & \texttt{fato\_indicador}, \texttt{ref\_faixa} \\
+\texttt{dim\_ano} & dimensão & ano & \NumLinhasDimAno & \texttt{fato\_indicador}, \texttt{previsao}, \texttt{ref\_faixa} \\

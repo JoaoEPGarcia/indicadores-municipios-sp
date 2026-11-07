@@ -235,6 +235,7 @@ def calcular():
                            ('NumCelulasExcelBatem', 'células da aba Painel iguais ao SQLite'),
                            ('NumMunicipiosExcel', 'municípios testados na planilha')]:
             N.add(nome, PENDENTE, desc, 'scripts/conferir_excel.py')
+    numeros_do_relatorio(N)
     return N
 
 
@@ -296,8 +297,223 @@ def escrever_readme(N):
     (RAIZ / 'README.md').write_text(texto, encoding='utf-8')
 
 
+# ══ Relatório em LaTeX (ticket 07) ═════════════════════════════════════
+# Os números que só o relatório usa e os arquivos que ele lê de relatorio/gerados/: linhas de tabela
+# (com \linhasde) e trechos de código (com \input), todos com a primeira linha "% GERADO". As linhas de
+# tabela usam as macros \Num... em vez do valor, para que "Onde aparece" as encontre.
+GERADOS = RAIZ / 'relatorio' / 'gerados'
+PLANILHA = RAIZ / 'excel' / 'painel-municipios-sp.xlsx'
+CABECALHO_GERADO = '% GERADO por scripts/numeros.py. Não edite à mão: rode o script de novo.'
+MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro',
+         'Outubro', 'Novembro', 'Dezembro']
+# Funções da planilha como o Excel em português as mostra (o arquivo as guarda em inglês).
+FUNCOES_PT = {'XLOOKUP': 'PROCX', 'IF': 'SE', 'AND': 'E', 'ISNUMBER': 'ÉNÚM', 'SUMPRODUCT': 'SOMARPRODUTO',
+              'MAXIFS': 'MÁXIMOSES', 'NA': 'NÃO.DISP', 'SEQUENCE': 'SEQUÊNCIA', 'MATCH': 'CORRESP', 'LET': 'LET'}
+# Papel e grão de cada tabela do modelo estrela, e o CSV que ela lê (dim_ano é calculada no modelo).
+TABELAS_MODELO = [
+    ('fato_indicador', 'fato', 'município, ano e Indicador', 'indicadores_longo.csv'),
+    ('ref_faixa', 'fato', 'Faixa de porte, ano e Indicador', 'referencia_faixa.csv'),
+    ('previsao', 'fato', 'município e ano previsto', 'previsao_receita_total.csv'),
+    ('dim_municipio', 'dimensão', 'município', 'dim_municipio.csv'),
+    ('dim_indicador', 'dimensão', 'Indicador', 'dim_indicador.csv'),
+    ('dim_ano', 'dimensão', 'ano', None),
+]
+NOME_METODO = {'ingenuo': 'Repetir o último valor', 'tendencia': 'Tendência dos {} últimos anos',
+               'reta': 'Reta dos {} últimos anos'}
+
+
+def _camel(texto):
+    """'Comparação na faixa' → 'ComparacaoNaFaixa': parte de nome de macro (só letras)."""
+    import unicodedata
+    sem_acento = unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode()
+    return ''.join(p[:1].upper() + p[1:] for p in re.findall(r'[A-Za-z]+', sem_acento))
+
+
+def _tt(nome):
+    return r'\texttt{' + nome.replace('_', r'\_') + '}'
+
+
+def medidas_por_pasta():
+    """{pasta de exibição sem o número de ordem: [medidas]}, na ordem do TMDL."""
+    texto = (TMDL / 'tables' / 'Medidas.tmdl').read_text(encoding='utf-8')
+    pastas = {}
+    for bloco in re.split(r'(?=^\tmeasure )', texto, flags=re.M)[1:]:
+        nome = re.match(r"\tmeasure (?:'([^']+)'|(\S+))", bloco)
+        pasta = re.search(r'^\t\tdisplayFolder: (?:\d+\.\s*)?(.+)$', bloco, re.M).group(1).strip()
+        pastas.setdefault(pasta, []).append(nome.group(1) or nome.group(2))
+    return pastas
+
+
+def numeros_do_relatorio(N):
+    import datetime
+    hoje = datetime.date.today()
+    N.add('NumMesCapa', MESES[hoje.month - 1], 'mês da capa do relatório (o mês em que o registro foi gerado)')
+    N.add('NumAnoCapa', hoje.year, 'ano da capa do relatório (o ano em que o registro foi gerado)')
+
+    sql = (RAIZ / 'sql' / '20_indicadores.sql').read_text(encoding='utf-8')
+    base = re.search(r'CREATE VIEW v_fator_\d+ AS.*?WHERE ano = (\d{4})', sql, re.S).group(1)
+    N.add('NumAnoBaseReais', base, 'ano-base dos reais (IPCA médio do ano)', 'sql/20_indicadores.sql')
+    baixo, alto = re.search(r'rc_liq\s*/\s*rc_liq_outros\s*<\s*([\d.]+)\s*OR\s*rc_liq\s*/\s*rc_liq_outros\s*>\s*([\d.]+)',
+                            sql).groups()
+    if abs(float(baixo) * float(alto) - 1) > 1e-9:
+        raise ValueError(f'a regra da declaração deixou de ser simétrica ({baixo} e {alto}): reescreva o texto')
+    N.add('NumRegraFator', fmt_int(float(alto)), 'quantas vezes acima ou abaixo da média dos outros anos o valor sai',
+          'sql/20_indicadores.sql')
+
+    linhas = {t: len(pd.read_csv(TRATADOS / arq)) for t, _, _, arq in TABELAS_MODELO if arq}
+    N.add('NumLinhasRefFaixa', fmt_int(linhas['ref_faixa']), 'linhas de ref_faixa (Faixa de porte × ano × Indicador)')
+    N.add('NumLinhasPrevisao', fmt_int(linhas['previsao']), 'linhas de previsao (município × ano previsto)')
+    anos_fim = max(int(N['NumAnoFinal']['valor']), int(N['NumAnoPrevFinal']['valor']))
+    N.add('NumLinhasDimAno', anos_fim - int(N['NumAnoInicial']['valor']) + 1,
+          'linhas de dim_ano (do primeiro ano dos dados ao último previsto)')
+
+    pastas = medidas_por_pasta()
+    N.add('NumPastasMedidas', len(pastas), 'pastas de exibição das medidas DAX')
+    for pasta, medidas in pastas.items():
+        N.add(f'NumMedidasPasta{_camel(pasta)}', len(medidas), f'medidas DAX na pasta "{pasta}"')
+    paginas = [p for p in (RAIZ / 'powerbi' / 'painel-municipios-sp.Report' / 'definition' / 'pages').iterdir() if p.is_dir()]
+    N.add('NumPaginasPainel', len(paginas), 'páginas do painel no Power BI', 'scripts/gerar_relatorio_pbi.py')
+
+    comp = RAIZ / 'powerbi' / 'resultado_conferencia_completa.csv'
+    N.add('NumMedidasCompletas', len(list(csv.DictReader(open(comp, encoding='utf-8')))) if comp.exists() else PENDENTE,
+          'medidas conferidas em cada linha da fato na conferência completa', 'scripts/conferir_powerbi.py')
+
+    val = (TRATADOS / 'validacao.txt').read_text(encoding='utf-8')
+    comparados = re.findall(r'^\[OK\] \w+: SQL = pandas: (\d+) valores, só no SQL (\d+), só no pandas (\d+), '
+                            r'maior diferença (\S+)$', val, re.M)
+    total = sum(int(c[0]) for c in comparados)
+    iguais = sum(int(c[0]) for c in comparados if c[1] == c[2] == '0' and float(c[3]) == 0)
+    N.add('NumValoresValidados', fmt_int(total), 'valores dos Indicadores refeitos em pandas e comparados com o SQL', 'scripts/validar.py')
+    N.add('NumValoresValidadosIguais', fmt_int(iguais), 'desses, os iguais ao SQL (diferença máxima zero)', 'scripts/validar.py')
+
+    met = pd.read_csv(TRATADOS / 'backtest_metodos.csv')
+    janelas = {m: int(re.sub(r'\D', '', m)) for m in met.metodo.unique() if re.search(r'\d', m)}
+    N.add('NumMetodos', met.metodo.nunique(), 'métodos de previsão testados contra o passado', 'scripts/modelo.py')
+    N.add('NumHorizontes', int(met.horizonte.max()), 'anos à frente da Previsão da receita e do Teste contra o passado', 'scripts/modelo.py')
+    N.add('NumJanelaEscolhido', janelas['tendencia3'], 'anos da tendência do método escolhido', 'scripts/modelo.py')
+    N.add('NumJanelaReta', janelas['tendencia5'], 'anos da reta do método concorrente', 'scripts/modelo.py')
+    for nivel, nn in [(80, 'Oitenta'), (95, 'NoventaCinco')]:
+        N.add(f'NumNivel{nn}', nivel, 'nível de um Intervalo de previsão, em %', 'scripts/modelo.py')
+
+
+def formula_da_planilha(aba, celula):
+    """A fórmula de uma célula da planilha gerada, como o Excel em português a mostra: PROCX no lugar de
+    XLOOKUP, ponto e vírgula entre os argumentos, sem os prefixos _xlfn. e _xlpm. do arquivo."""
+    import openpyxl
+    v = openpyxl.load_workbook(PLANILHA)[aba][celula].value
+    f = getattr(v, 'text', v).replace('_xlfn.', '').replace('_xlpm.', '')
+    saida, i, colchete = [], 0, 0
+    while i < len(f):
+        c = f[i]
+        if c == '"':                                   # texto: copia até as aspas de fechamento
+            fim = f.index('"', i + 1)
+            saida.append(f[i:fim + 1])
+            i = fim + 1
+            continue
+        m = None if colchete else re.match(r'[A-Z][A-Z.]*(?=\()', f[i:])
+        if m and (i == 0 or not re.match(r'[\w.]', f[i - 1])):
+            saida.append(FUNCOES_PT.get(m.group(0), m.group(0)))
+            i += len(m.group(0))
+            continue
+        colchete += (c == '[') - (c == ']')
+        saida.append(';' if c == ',' and not colchete else c)
+        i += 1
+    return ''.join(saida)
+
+
+def quebrar_formula(f):
+    """A fórmula em várias linhas, para caber na página: um argumento por linha na função de fora (no LET,
+    um nome e o seu valor por linha), alinhados depois do parêntese."""
+    abre = f.index('(')
+    args, atual, prof, texto = [], '', 0, False
+    for c in f[abre + 1:-1]:
+        texto ^= c == '"'
+        if not texto:
+            prof += (c == '(') - (c == ')')
+        if c == ';' and prof == 0 and not texto:
+            args.append(atual.strip())
+            atual = ''
+        else:
+            atual += c
+    args.append(atual.strip())
+    if f[:abre].endswith('LET'):
+        args = ['; '.join(args[k:k + 2]) for k in range(0, len(args) - 1, 2)] + [args[-1]]
+    recuo = ' ' * (abre + 1)
+    return f[:abre + 1] + (';\n' + recuo).join(args) + ')'
+
+
+def medida_dax(nome):
+    """A expressão de uma medida, lida do TMDL, sem os comentários de linha e com dois espaços de recuo."""
+    texto = (TMDL / 'tables' / 'Medidas.tmdl').read_text(encoding='utf-8')
+    m = re.search(r"^\tmeasure '" + re.escape(nome) + r"' =(.*)\n((?:\t\t\t.*\n|[ \t]*\n)*)", texto, re.M)
+    corpo = [l[3:].replace('\t', '  ') for l in m.group(2).splitlines()
+             if l.strip() and not l.strip().startswith('--')]
+    return '\n'.join([f'{nome} ={m.group(1)}'.rstrip()] + ['  ' + l for l in corpo])
+
+
+def _codigo(destino, codigo):
+    destino.write_text('\n'.join([CABECALHO_GERADO, r'\begin{verbatim}', codigo, r'\end{verbatim}']) + '\n',
+                       encoding='utf-8')
+
+
+def _linhas(destino, linhas):
+    destino.write_text('\n'.join([CABECALHO_GERADO] + [l + r' \\' for l in linhas]) + '\n', encoding='utf-8')
+
+
+def escrever_gerados_relatorio(N):
+    GERADOS.mkdir(parents=True, exist_ok=True)
+    _, relacoes, _ = ler_tmdl()
+    liga = {}
+    for f, d in relacoes:
+        liga.setdefault(f, []).append(d)
+        liga.setdefault(d, []).append(f)
+    papeis = {t: p for t, p, _, _ in TABELAS_MODELO}
+    if set(liga) != set(papeis) or any((papeis[f], papeis[d]) != ('fato', 'dimensão') for f, d in relacoes):
+        raise ValueError('as relações do TMDL não batem com TABELAS_MODELO: atualize a lista')
+    macro_linhas = {'fato_indicador': r'\NumLinhasFato', 'ref_faixa': r'\NumLinhasRefFaixa',
+                    'previsao': r'\NumLinhasPrevisao', 'dim_municipio': r'\NumMunicipios',
+                    'dim_indicador': r'\NumIndicadores', 'dim_ano': r'\NumLinhasDimAno'}
+    _linhas(GERADOS / 'tabelas_modelo.tex', [
+        f'{_tt(t)} & {p} & {g} & {macro_linhas[t]} & ' + ', '.join(_tt(x) for x in sorted(liga[t]))
+        for t, p, g, _ in TABELAS_MODELO])
+
+    _linhas(GERADOS / 'pastas_medidas.tex', [
+        f'{pasta} & \\NumMedidasPasta{_camel(pasta)} & ' + '; '.join(medidas[:3])
+        + ('; \\ldots' if len(medidas) > 3 else '')
+        for pasta, medidas in medidas_por_pasta().items()])
+
+    _linhas(GERADOS / 'conferencias.tex', [
+        r'Indicadores: SQL e pandas & cada valor refeito em pandas, sem olhar o SQL & \NumValoresValidados & \NumValoresValidadosIguais',
+        r'Medidas DAX e tabela de conferência & valores esperados de \NumMunicipiosConferencia{} municípios sorteados & \NumCelulasConferencia & \NumCelulasBatem',
+        r'Medidas DAX e SQLite & \NumMedidasCompletas{} medidas em cada linha da fato & \NumCelulasCompletas & \NumDivergenciasCompletas{} divergências',
+        r'Planilha e SQLite & aba Painel calculada no Excel para a web, \NumMunicipiosExcel{} municípios & \NumCelulasExcel & \NumCelulasExcelBatem',
+    ])
+
+    met = pd.read_csv(TRATADOS / 'backtest_metodos.csv')
+    linhas = []
+    for metodo, nome, rotulo in [('ingenuo', 'Ingenuo', NOME_METODO['ingenuo']),
+                                 ('tendencia3', 'Escolhido', NOME_METODO['tendencia'].format(r'\NumJanelaEscolhido{}')),
+                                 ('tendencia5', 'Reta', NOME_METODO['reta'].format(r'\NumJanelaReta{}'))]:
+        escolhido = bool(met[met.metodo == metodo].escolhido.max())
+        celulas = ([rotulo + (' (escolhido)' if escolhido else '')]
+                   + [f'\\NumErro{nome}{h}\\%' for h in ('Um', 'Dois', 'Tres')] + [f'\\NumVies{nome}Tres\\%'])
+        linhas.append(' & '.join(f'\\textbf{{{c}}}' if escolhido else c for c in celulas))
+    _linhas(GERADOS / 'teste_metodos.tex', linhas)
+
+    _linhas(GERADOS / 'cobertura.tex', [
+        f'\\NumNivel{nn}\\% & \\NumCob{nn}Sem\\% & \\NumEscala{nn} & \\NumCob{nn}Com\\% & '
+        f'\\NumCob{nn}Pior\\% (origem \\NumCob{nn}PiorOrigem)' for nn in ('Oitenta', 'NoventaCinco')])
+
+    _codigo(GERADOS / 'dax_mediana.tex', medida_dax('Mediana da faixa'))
+    _codigo(GERADOS / 'dax_posicao.tex', medida_dax('Posição na faixa'))
+    _codigo(GERADOS / 'excel_procx.tex', quebrar_formula(formula_da_planilha('Painel', 'E13')))
+    _codigo(GERADOS / 'excel_let.tex', quebrar_formula(formula_da_planilha('Painel', 'D13')))
+# ══ fim do relatório em LaTeX ══════════════════════════════════════════
+
+
 def main():
     N = calcular()
+    escrever_gerados_relatorio(N)
     onde = onde_aparece(N)
     escrever_tex(N)
     escrever_canonicos(N, onde)
