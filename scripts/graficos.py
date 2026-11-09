@@ -95,7 +95,7 @@ def figura_painel(d, N, cod):
     fig_nome = '01-painel-municipio.png'
     ex, faixa_txt, n_faixa = usar(fig_nome, N, 'NumExemplo', 'NumExemploFaixa', 'NumExemploNaFaixa')
     verbo, dif, sentido, objeto = usar(fig_nome, N, 'NumFigUmVerbo', 'NumFigUmDif', 'NumFigUmSentido', 'NumFigUmObjeto')
-    a0, a1 = usar(fig_nome, N, 'NumAnoInicial', 'NumAnoFinal')
+    a0, a1, base = usar(fig_nome, N, 'NumAnoInicial', 'NumAnoFinal', 'NumAnoBase')
     faixa = d['mun'].set_index('cod_ibge').faixa_porte[cod]
     nomes = d['ind'].set_index('indicador_id')
 
@@ -123,7 +123,7 @@ def figura_painel(d, N, cod):
     titulo_figura(fig, f'{ex} {verbo} {dif}% {sentido} {objeto} que a mediana dos {n_faixa} municípios {faixa_txt} habitantes',
                   f'Valor do município (vermelho), mediana dos municípios parecidos (linha cinza) e faixa do 1º ao 3º quartil '
                   f'(sombra), {a0} a {a1}. Os eixos não começam no zero.')
-    fonte_figura(fig, FONTE_FINANCAS + '\nReais de 2025 (IPCA). Os valores por habitante têm um degrau entre 2021 e 2022 '
+    fonte_figura(fig, FONTE_FINANCAS + f'\nReais de {base} (IPCA). Os valores por habitante têm um degrau entre 2021 e 2022 '
                       '(troca da base de população para o Censo 2022).')
     salvar(fig, fig_nome)
 
@@ -155,7 +155,8 @@ def figura_faixa(d, N, cod):
                capprops=dict(color=COR_BARRA, linewidth=1))
     for k, (_, _, v) in enumerate(linhas, start=1):
         ax.scatter([v], [k], s=70, color=DESTAQUE, edgecolor='white', linewidth=1, zorder=5)
-        ax.annotate(('+' if v > 0 else '−') + numeros.fmt(abs(v), 1) + '%', (v, k), xytext=(0, 13),
+        # o rótulo fica acima do topo da caixa (meia altura 0,25), e não sobre a borda dela
+        ax.annotate(('+' if v > 0 else '−') + numeros.fmt(abs(v), 1) + '%', (v, k + 0.25), xytext=(0, 3),
                     textcoords='offset points', ha='center', va='bottom', fontsize=TAM_NOTA, color=cor_de_texto(DESTAQUE),
                     bbox=dict(boxstyle='square,pad=0.1', facecolor='white', edgecolor='none'), zorder=6)
     ax.axvline(0, color=GRAY_60, linewidth=1, zorder=1)
@@ -176,7 +177,8 @@ def figura_faixa(d, N, cod):
 def figura_previsao(d, N, cod):
     fig_nome = '03-previsao.png'
     ex, prev, lo9, hi9 = usar(fig_nome, N, 'NumExemplo', 'NumExemploPrevista', 'NumExemploInfNoventaCinco', 'NumExemploSupNoventaCinco')
-    af, a0 = usar(fig_nome, N, 'NumAnoPrevFinal', 'NumAnoInicial')
+    af, a0, base, n80, n95, jan = usar(fig_nome, N, 'NumAnoPrevFinal', 'NumAnoInicial', 'NumAnoBase', 'NumNivelMenor',
+                                       'NumNivelMaior', 'NumJanelaEscolhido')
     s = d['fato'][(d['fato'].cod_ibge == cod) & (d['fato'].indicador_id == 'receita_total')].sort_values('ano')
     p = d['prev'][d['prev'].cod_ibge == cod].sort_values('ano')
     ancora_ano, ancora_v = int(s.ano.iloc[-1]), float(s.valor.iloc[-1])
@@ -193,18 +195,18 @@ def figura_previsao(d, N, cod):
             markeredgewidth=0.8, zorder=4)
     x = p.ano.iloc[-1]
     rotular_ponta(ax, x, p.previsto.iloc[-1], f'previsto: {prev}', cor=DESTAQUE)
-    rotular_ponta(ax, x, (p.superior_80.iloc[-1] + p.superior_95.iloc[-1]) / 2, 'intervalo de 95%', cor=GRAY_60, negrito=False)
-    rotular_ponta(ax, x, (p.superior_80.iloc[-1] + p.previsto.iloc[-1]) / 2, 'intervalo de 80%', cor=GRAY_60, negrito=False)
+    rotular_ponta(ax, x, (p.superior_80.iloc[-1] + p.superior_95.iloc[-1]) / 2, f'intervalo de {n95}%', cor=GRAY_60, negrito=False)
+    rotular_ponta(ax, x, (p.superior_80.iloc[-1] + p.previsto.iloc[-1]) / 2, f'intervalo de {n80}%', cor=GRAY_60, negrito=False)
     ax.axvline(ancora_ano + 0.5, color=GRAY_60, linewidth=0.8, linestyle=(0, (4, 3)), zorder=0)
     ax.annotate('previsão', xy=(ancora_ano + 0.5, 1), xycoords=('data', 'axes fraction'), xytext=(5, -2),
                 textcoords='offset points', ha='left', va='top', fontsize=TAM_NOTA, color=GRAY_70)
     ax.yaxis.set_major_formatter(br(0))
-    ax.set_ylabel('R$ milhões de 2025')
+    ax.set_ylabel(f'R$ milhões de {base}')
     eixo_ano(ax)
     ax.set_xlim(int(a0) - 0.3, int(af) + 0.3)
     # "R\$": dois cifrões no mesmo texto abririam o modo matemático do matplotlib
-    titulo(ax, f'A receita de {ex} deve chegar a R\\$ {prev} milhões em {af},\nentre R\\$ {lo9} e R\\$ {hi9} milhões no intervalo de 95%',
-           f'Receita corrente total, observada até {ancora_ano} e prevista pela tendência dos 3 últimos anos. '
+    titulo(ax, f'A receita de {ex} deve chegar a R\\$ {prev} milhões em {af},\nentre R\\$ {lo9} e R\\$ {hi9} milhões no intervalo de {n95}%',
+           f'Receita corrente total, observada até {ancora_ano} e prevista pela tendência dos {jan} últimos anos. '
            'O eixo não começa no zero.')
     fonte(ax, 'Fonte: Siconfi/Tesouro Nacional (DCA, anexo I-C) e IBGE (IPCA). Intervalos tirados dos erros do método ao prever o passado.')
     salvar(fig, fig_nome)
@@ -216,7 +218,9 @@ def figura_teste(d, N):
     e3, i3 = usar(fig_nome, N, 'NumErroEscolhidoTres', 'NumErroIngenuoTres')
     pior, origem, media = usar(fig_nome, N, 'NumCobOitentaPior', 'NumCobOitentaPiorOrigem', 'NumCobOitentaCom')
     o0, o1 = usar(fig_nome, N, 'NumOrigemInicial', 'NumOrigemFinal')
-    nomes = {'ingenuo': 'Repetir o último valor', 'tendencia3': 'Tendência dos 3 últimos anos', 'tendencia5': 'Reta dos 5 últimos anos'}
+    n80, jan3, jan5 = usar(fig_nome, N, 'NumNivelMenor', 'NumJanelaEscolhido', 'NumJanelaReta')
+    nomes = {'ingenuo': 'Repetir o último valor', 'tendencia3': f'Tendência dos {jan3} últimos anos',
+             'tendencia5': f'Reta dos {jan5} últimos anos'}
 
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(12.5, 5.2), gridspec_kw=dict(width_ratios=[1.15, 1]))
     finais = {}
@@ -248,16 +252,16 @@ def figura_teste(d, N):
     for x, (v, c) in enumerate(zip(por_origem.values(), cores)):
         a2.annotate(pct(v), (x, v), xytext=(0, 4), textcoords='offset points', ha='center',
                     va='bottom', fontsize=TAM_NOTA, color=cor_de_texto(c))
-    a2.axhline(80, color=GRAY_70, linewidth=1, linestyle=(0, (4, 3)))
-    a2.annotate('80% prometidos', xy=(1, 80), xycoords=('axes fraction', 'data'), xytext=(0, 4),
+    a2.axhline(float(n80), color=GRAY_70, linewidth=1, linestyle=(0, (4, 3)))
+    a2.annotate(f'{n80}% prometidos', xy=(1, float(n80)), xycoords=('axes fraction', 'data'), xytext=(0, 4),
                 textcoords='offset points', ha='right', va='bottom', fontsize=TAM_NOTA, color=GRAY_70)
     a2.yaxis.set_major_formatter(FuncFormatter(pct))
     eixo_no_zero(a2, topo=100)
-    a2.set_title('Cobertura do intervalo de 80%, por origem deixada de fora', loc='left', fontweight='normal', color=GRAY_90)
+    a2.set_title(f'Cobertura do intervalo de {n80}%, por origem deixada de fora', loc='left', fontweight='normal', color=GRAY_90)
 
     fig.tight_layout(rect=(0, 0, 0.97, 0.88), w_pad=14)
-    titulo_figura(fig, f'A tendência dos 3 últimos anos erra {e3}% a três anos, contra {i3}% de repetir o último valor',
-                  f'Previsões feitas a partir de {o0} a {o1} e comparadas ao que veio depois. Na média, o intervalo de 80% '
+    titulo_figura(fig, f'A tendência dos {jan3} últimos anos erra {e3}% a três anos, contra {i3}% de repetir o último valor',
+                  f'Previsões feitas a partir de {o0} a {o1} e comparadas ao que veio depois. Na média, o intervalo de {n80}% '
                   f'cobriu {media}%;\ncom {origem} deixado de fora, cobriu {pior}%.')
     fonte_figura(fig, 'Fonte: Siconfi/Tesouro Nacional (DCA, anexo I-C), receita corrente total dos municípios de SP. '
                       'Cobertura ponderada pelo número de previsões testadas.')

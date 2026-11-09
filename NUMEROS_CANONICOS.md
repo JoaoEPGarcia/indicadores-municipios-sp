@@ -17,10 +17,10 @@ Cada número impresso no README, no relatório e nos títulos das figuras tem um
 | `\NumAnoPrevInicial` | 2026 | primeiro ano previsto | `scripts/numeros.py` | (ainda não usado) |
 | `\NumAnoPrevFinal` | 2028 | último ano previsto | `scripts/numeros.py` | `docs/README.modelo.md`, `relatorio/relatorio.tex`, `graficos/03-previsao.png` |
 | `\NumMunicipiosComPrevisao` | 642 | municípios com Previsão da receita | `scripts/numeros.py` | `relatorio/relatorio.tex` |
-| `\NumAnoBase` | 2025 | ano dos preços dos valores em reais (o anterior ao primeiro ano previsto) | `scripts/numeros.py` | `docs/README.modelo.md`, `relatorio/relatorio.tex`, `excel/painel-municipios-sp.xlsx` |
+| `\NumAnoBase` | 2025 | ano dos preços dos valores em reais (o anterior ao primeiro ano previsto) | `scripts/numeros.py` | `docs/README.modelo.md`, `relatorio/relatorio.tex`, `graficos/01-painel-municipio.png`, `graficos/03-previsao.png`, `excel/painel-municipios-sp.xlsx` |
 | `\NumAnoFinalPib` | 2023 | último ano do PIB dos Municípios na base | `scripts/numeros.py` | `docs/README.modelo.md` |
-| `\NumNivelMenor` | 80 | nível, em %, do Intervalo de previsão mais estreito | `scripts/modelo.py` | `docs/README.modelo.md`, `relatorio/gerados/cobertura.tex`, `relatorio/relatorio.tex`, `excel/painel-municipios-sp.xlsx` |
-| `\NumNivelMaior` | 95 | nível, em %, do Intervalo de previsão mais largo | `scripts/modelo.py` | `docs/README.modelo.md`, `relatorio/gerados/cobertura.tex`, `relatorio/relatorio.tex`, `excel/painel-municipios-sp.xlsx` |
+| `\NumNivelMenor` | 80 | nível, em %, do Intervalo de previsão mais estreito | `scripts/modelo.py` | `docs/README.modelo.md`, `relatorio/gerados/cobertura.tex`, `relatorio/relatorio.tex`, `graficos/03-previsao.png`, `graficos/04-teste-do-modelo.png`, `excel/painel-municipios-sp.xlsx` |
+| `\NumNivelMaior` | 95 | nível, em %, do Intervalo de previsão mais largo | `scripts/modelo.py` | `docs/README.modelo.md`, `relatorio/gerados/cobertura.tex`, `relatorio/relatorio.tex`, `graficos/03-previsao.png`, `excel/painel-municipios-sp.xlsx` |
 | `\NumPaginasPainel` | 4 | páginas do painel do Power BI (pageOrder do PBIR) | `scripts/gerar_relatorio_pbi.py` | `docs/README.modelo.md`, `relatorio/relatorio.tex` |
 | `\NumDataConsultaFontes` | 14/10/2026 | data da leitura das condições de uso das fontes (constante registrada aqui) | `scripts/numeros.py` | `docs/README.modelo.md` |
 | `\NumTabelasFato` | 3 | tabelas fato do modelo (lado "muitos" das relações: fato_indicador, previsao, ref_faixa) | `scripts/numeros.py` | `docs/README.modelo.md`, `relatorio/relatorio.tex` |
@@ -102,5 +102,5 @@ Cada número impresso no README, no relatório e nos títulos das figuras tem um
 | `\NumValoresValidadosIguais` | 50.413 | desses, os iguais ao SQL (diferença máxima zero) | `scripts/validar.py` | `relatorio/gerados/conferencias.tex` |
 | `\NumMetodos` | 3 | métodos de previsão testados contra o passado | `scripts/modelo.py` | `relatorio/relatorio.tex` |
 | `\NumHorizontes` | 3 | anos à frente da Previsão da receita e do Teste contra o passado | `scripts/modelo.py` | `relatorio/relatorio.tex` |
-| `\NumJanelaEscolhido` | 3 | anos da tendência do método escolhido | `scripts/modelo.py` | `relatorio/gerados/teste_metodos.tex`, `relatorio/relatorio.tex` |
-| `\NumJanelaReta` | 5 | anos da reta do método concorrente | `scripts/modelo.py` | `relatorio/gerados/teste_metodos.tex` |
+| `\NumJanelaEscolhido` | 3 | anos da tendência do método escolhido | `scripts/modelo.py` | `relatorio/gerados/teste_metodos.tex`, `relatorio/relatorio.tex`, `graficos/03-previsao.png`, `graficos/04-teste-do-modelo.png` |
+| `\NumJanelaReta` | 5 | anos da reta do método concorrente | `scripts/modelo.py` | `relatorio/gerados/teste_metodos.tex`, `graficos/04-teste-do-modelo.png` |

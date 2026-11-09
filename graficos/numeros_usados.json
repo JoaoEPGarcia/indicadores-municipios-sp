@@ -8,7 +8,8 @@
     "NumFigUmSentido",
     "NumFigUmObjeto",
     "NumAnoInicial",
-    "NumAnoFinal"
+    "NumAnoFinal",
+    "NumAnoBase"
   ],
   "02-municipio-na-faixa.png": [
     "NumExemplo",
@@ -23,7 +24,11 @@
     "NumExemploInfNoventaCinco",
     "NumExemploSupNoventaCinco",
     "NumAnoPrevFinal",
-    "NumAnoInicial"
+    "NumAnoInicial",
+    "NumAnoBase",
+    "NumNivelMenor",
+    "NumNivelMaior",
+    "NumJanelaEscolhido"
   ],
   "04-teste-do-modelo.png": [
     "NumErroEscolhidoTres",
@@ -32,6 +37,9 @@
     "NumCobOitentaPiorOrigem",
     "NumCobOitentaCom",
     "NumOrigemInicial",
-    "NumOrigemFinal"
+    "NumOrigemFinal",
+    "NumNivelMenor",
+    "NumJanelaEscolhido",
+    "NumJanelaReta"
   ]
 }
